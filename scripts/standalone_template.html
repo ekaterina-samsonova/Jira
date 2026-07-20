@@ -3,272 +3,289 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mindbox → SFMC Converter</title>
+  <title>Sanofi | Mindbox → SFMC Converter v3</title>
   <style>
     :root {
-      --bg: #f0f4ff;
-      --bg-accent: #e8eefc;
-      --surface: #ffffff;
-      --surface-soft: #f8faff;
-      --text: #1e293b;
-      --muted: #64748b;
-      --line: #e2e8f0;
-      --primary: #4f46e5;
-      --primary-soft: #eef2ff;
-      --primary-dark: #4338ca;
-      --success: #10b981;
-      --success-soft: #ecfdf5;
-      --warning: #f59e0b;
-      --warning-soft: #fffbeb;
-      --error: #ef4444;
-      --error-soft: #fef2f2;
-      --shadow: 0 18px 45px rgba(79, 70, 229, 0.08);
-      --radius: 18px;
+      --sanofi-purple: #7A00E6;
+      --sanofi-black: #000000;
+      --sanofi-white: #FFFFFF;
+      --bg: #f7f7fb;
+      --line: #ddd9ea;
+      --text-soft: #4b4b58;
+      --danger: #d92222;
+      --success-bg: #e8f9ee;
+      --success-line: #2ea35f;
+      --error-bg: #ffe9e9;
+      --error-line: #d12f2f;
+      --warning-bg: #fff9df;
+      --warning-line: #f0bd27;
+      --card-shadow: 0 14px 35px rgba(0, 0, 0, 0.08);
     }
 
     * { box-sizing: border-box; }
 
+    html, body { height: 100%; }
+
     body {
       margin: 0;
-      font-family: "Segoe UI", Inter, system-ui, sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(79, 70, 229, 0.12), transparent 28%),
-        radial-gradient(circle at top right, rgba(16, 185, 129, 0.08), transparent 24%),
-        var(--bg);
-      min-height: 100vh;
-    }
-
-    .page {
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 28px 20px 48px;
-    }
-
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .logo-mark {
-      width: 52px;
-      height: 52px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      color: white;
-      display: grid;
-      place-items: center;
-      font-weight: 800;
-      font-size: 18px;
-      box-shadow: 0 10px 24px rgba(79, 70, 229, 0.25);
-    }
-
-    .logo h1 {
-      margin: 0;
-      font-size: 24px;
-      line-height: 1.1;
-    }
-
-    .logo p {
-      margin: 4px 0 0;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: var(--success-soft);
-      color: #047857;
-      font-size: 13px;
-      font-weight: 700;
-      border: 1px solid #bbf7d0;
-      white-space: nowrap;
-    }
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 22px;
-    }
-
-    .step {
-      background: rgba(255,255,255,0.75);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      transition: 0.2s ease;
-    }
-
-    .step.active {
-      border-color: #c7d2fe;
-      background: white;
-      box-shadow: var(--shadow);
-    }
-
-    .step.done {
-      border-color: #bbf7d0;
-      background: var(--success-soft);
-    }
-
-    .step-num {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      background: var(--bg-accent);
-      color: var(--primary);
-      font-weight: 800;
-      flex-shrink: 0;
-    }
-
-    .step.active .step-num {
-      background: var(--primary);
-      color: white;
-    }
-
-    .step.done .step-num {
-      background: var(--success);
-      color: white;
-    }
-
-    .step strong {
-      display: block;
-      font-size: 14px;
-    }
-
-    .step span {
-      display: block;
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 1.15fr 0.85fr;
-      gap: 18px;
-      align-items: start;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid rgba(226, 232, 240, 0.95);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .card-head {
-      padding: 22px 24px 0;
-    }
-
-    .card-head h2 {
-      margin: 0 0 6px;
-      font-size: 22px;
-    }
-
-    .card-head p {
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .card-body {
-      padding: 22px 24px 24px;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--sanofi-black);
+      background: linear-gradient(180deg, #f7f7fb 0%, #f3eefb 100%);
+      padding-bottom: 112px;
     }
 
     .toast {
       position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 1000;
+      top: 16px;
+      right: 16px;
+      z-index: 1200;
       min-width: 280px;
       max-width: 420px;
       padding: 14px 16px;
-      border-radius: 14px;
-      font-weight: 600;
-      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
-      transform: translateY(-12px);
+      border-radius: 12px;
+      font-weight: 700;
+      transform: translateY(-16px);
       opacity: 0;
       pointer-events: none;
-      transition: 0.25s ease;
+      transition: all 0.25s ease;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
     }
 
     .toast.show {
-      transform: translateY(0);
       opacity: 1;
+      transform: translateY(0);
     }
 
-    .toast.success { background: var(--success-soft); color: #065f46; border: 1px solid #a7f3d0; }
-    .toast.error { background: var(--error-soft); color: #991b1b; border: 1px solid #fecaca; }
-    .toast.info { background: var(--primary-soft); color: #3730a3; border: 1px solid #c7d2fe; }
+    .toast.success {
+      background: var(--success-bg);
+      border: 2px solid var(--success-line);
+      color: #145530;
+    }
+
+    .toast.error {
+      background: var(--error-bg);
+      border: 2px solid var(--error-line);
+      color: #7f1d1d;
+    }
+
+    .toast.info {
+      background: #efe4ff;
+      border: 2px solid var(--sanofi-purple);
+      color: #3a0c6d;
+    }
+
+    .sanofi-header {
+      width: 100%;
+      background: var(--sanofi-purple);
+      color: var(--sanofi-white);
+      padding: 28px 20px 26px;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.2);
+    }
+
+    .header-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .wordmark {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      background: var(--sanofi-white);
+      color: var(--sanofi-black);
+      border-radius: 999px;
+      padding: 9px 20px 9px 18px;
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+
+    .wordmark .dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--sanofi-purple);
+      right: 10px;
+    }
+
+    .wordmark .dot.dot-1 { top: 8px; }
+    .wordmark .dot.dot-2 { bottom: 8px; }
+
+    .header-title {
+      margin: 0;
+      font-size: clamp(24px, 3.3vw, 38px);
+      font-weight: 900;
+      line-height: 1.08;
+    }
+
+    .header-subtitle {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.92;
+    }
+
+    .version-banner {
+      width: fit-content;
+      max-width: 100%;
+      background: #ffd74f;
+      color: var(--sanofi-black);
+      font-weight: 900;
+      font-size: 18px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 2px solid var(--sanofi-black);
+    }
+
+    .page {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .wizard-steps {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+    }
+
+    .step-card {
+      display: grid;
+      grid-template-columns: 82px 1fr;
+      align-items: center;
+      border-left: 10px solid var(--sanofi-purple);
+      background: var(--sanofi-white);
+      border-radius: 14px;
+      border-top: 2px solid var(--line);
+      border-right: 2px solid var(--line);
+      border-bottom: 2px solid var(--line);
+      padding: 14px 16px;
+      box-shadow: var(--card-shadow);
+    }
+
+    .step-card.active {
+      border-left-color: var(--sanofi-black);
+      background: #f3e6ff;
+    }
+
+    .step-card.done {
+      border-left-color: #1b8f49;
+      background: #effcf3;
+    }
+
+    .step-number {
+      font-size: 52px;
+      font-weight: 900;
+      color: var(--sanofi-purple);
+      line-height: 1;
+      text-align: center;
+    }
+
+    .step-card.active .step-number { color: var(--sanofi-black); }
+    .step-card.done .step-number { color: #1b8f49; }
+
+    .step-content strong {
+      display: block;
+      font-size: 20px;
+      margin-bottom: 3px;
+    }
+
+    .step-content span {
+      display: block;
+      color: var(--text-soft);
+      font-size: 14px;
+    }
+
+    .wizard-card {
+      background: var(--sanofi-white);
+      border-radius: 16px;
+      border: 2px solid var(--line);
+      box-shadow: var(--card-shadow);
+      overflow: hidden;
+    }
+
+    .wizard-card .card-head {
+      padding: 20px 22px 12px;
+      border-bottom: 1px solid #ece8f4;
+      background: #fcf9ff;
+    }
+
+    .wizard-card .card-head h2 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.1;
+    }
+
+    .wizard-card .card-head p {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 15px;
+    }
+
+    .wizard-card .card-body {
+      padding: 22px;
+      display: grid;
+      gap: 18px;
+    }
 
     .upload-zone {
-      margin-top: 18px;
-      border: 2px dashed #cbd5e1;
+      min-height: 290px;
+      border: 4px dashed var(--sanofi-purple);
       border-radius: 18px;
-      padding: 34px 24px;
+      background: linear-gradient(180deg, #f7f0ff 0%, #ffffff 100%);
+      display: grid;
+      place-items: center;
       text-align: center;
-      background: linear-gradient(180deg, #fbfdff, var(--surface-soft));
-      transition: 0.2s ease;
       cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 20px;
     }
 
     .upload-zone:hover,
     .upload-zone.drag {
-      border-color: var(--primary);
-      background: #f5f7ff;
+      border-color: var(--sanofi-black);
+      background: linear-gradient(180deg, #efe0ff 0%, #ffffff 100%);
     }
 
     .upload-icon {
-      width: 68px;
-      height: 68px;
-      margin: 0 auto 14px;
-      border-radius: 18px;
-      background: var(--primary-soft);
+      width: 94px;
+      height: 94px;
+      border-radius: 24px;
+      background: var(--sanofi-purple);
+      color: var(--sanofi-white);
+      font-size: 48px;
       display: grid;
       place-items: center;
-      font-size: 30px;
+      margin: 0 auto 14px;
     }
 
     .upload-zone h3 {
-      margin: 0 0 6px;
-      font-size: 18px;
+      margin: 0 0 8px;
+      font-size: clamp(24px, 3.8vw, 34px);
     }
 
     .upload-zone p {
       margin: 0;
-      color: var(--muted);
+      font-size: 16px;
+      color: var(--text-soft);
+      font-weight: 600;
     }
 
     .file-chip {
       display: none;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      margin-top: 16px;
-      padding: 14px 16px;
+      gap: 16px;
+      border: 2px solid var(--sanofi-purple);
       border-radius: 14px;
-      background: var(--primary-soft);
-      border: 1px solid #c7d2fe;
+      background: #f4e9ff;
+      padding: 14px 16px;
     }
 
     .file-chip.visible { display: flex; }
@@ -281,69 +298,73 @@
     }
 
     .file-chip-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      background: white;
+      width: 46px;
+      height: 46px;
+      border-radius: 10px;
+      background: var(--sanofi-white);
+      border: 2px solid var(--sanofi-purple);
       display: grid;
       place-items: center;
-      font-size: 20px;
+      font-size: 22px;
       flex-shrink: 0;
     }
 
     .file-chip-name {
-      font-weight: 700;
-      word-break: break-all;
+      font-size: 16px;
+      font-weight: 800;
+      word-break: break-word;
     }
 
     .file-chip-meta {
+      margin-top: 3px;
+      color: var(--text-soft);
       font-size: 12px;
-      color: var(--muted);
-      margin-top: 2px;
     }
 
     .section-title {
+      margin: 0;
+      font-size: 21px;
+      font-weight: 900;
+      color: var(--sanofi-purple);
       display: flex;
       align-items: center;
       gap: 10px;
-      margin: 22px 0 14px;
-      font-size: 15px;
-      font-weight: 800;
-      color: var(--primary-dark);
     }
 
-    .section-title:first-child { margin-top: 0; }
-
     .section-badge {
+      background: var(--sanofi-purple);
+      color: var(--sanofi-white);
       font-size: 11px;
-      font-weight: 700;
-      padding: 4px 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
       border-radius: 999px;
-      background: var(--primary-soft);
-      color: var(--primary-dark);
+      padding: 4px 8px;
     }
 
     .form-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 14px;
     }
 
     .field {
-      display: flex;
-      flex-direction: column;
+      display: grid;
       gap: 7px;
     }
 
-    .field-wide { grid-column: 1 / -1; }
-
     .field label {
-      font-size: 13px;
-      font-weight: 700;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .required {
+      color: var(--danger);
+      margin-left: 3px;
+      font-weight: 900;
     }
 
     .field small {
-      color: var(--muted);
+      color: var(--text-soft);
       font-size: 12px;
       line-height: 1.4;
     }
@@ -351,210 +372,165 @@
     .field input,
     .field select {
       width: 100%;
-      padding: 12px 14px;
-      border: 1px solid var(--line);
-      border-radius: 12px;
+      height: 48px;
+      border-radius: 10px;
+      border: 2px solid #d6d1e2;
+      padding: 0 13px;
       font: inherit;
-      background: white;
+      background: var(--sanofi-white);
+      color: var(--sanofi-black);
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .brand-list select {
+      min-height: 180px;
+      height: auto;
+      padding-top: 10px;
+      padding-bottom: 10px;
     }
 
     .field input:focus,
     .field select:focus {
+      border-color: var(--sanofi-purple);
+      box-shadow: 0 0 0 4px rgba(122, 0, 230, 0.14);
       outline: none;
-      border-color: #a5b4fc;
-      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
     }
 
     .field.invalid input,
     .field.invalid select {
-      border-color: #fca5a5;
-      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.08);
+      border-color: var(--danger);
+      box-shadow: 0 0 0 4px rgba(217, 34, 34, 0.14);
     }
 
     .brand-box {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 12px;
     }
 
-    .brand-list {
-      min-height: 180px;
-      max-height: 220px;
-      overflow: auto;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: white;
-    }
-
-    .brand-list select {
-      border: none;
-      min-height: 178px;
-      border-radius: 12px;
-    }
-
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 22px;
-    }
-
-    .btn {
-      border: none;
-      border-radius: 12px;
-      padding: 12px 18px;
-      font: inherit;
-      font-weight: 700;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-    }
-
-    .btn:hover:not(:disabled) { transform: translateY(-1px); }
-    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #4f46e5, #6366f1);
-      color: white;
-      box-shadow: 0 10px 24px rgba(79, 70, 229, 0.25);
-    }
-
-    .btn-secondary {
-      background: #eef2ff;
-      color: #4338ca;
-    }
-
-    .btn-success {
-      background: linear-gradient(135deg, #059669, #10b981);
-      color: white;
-      box-shadow: 0 10px 24px rgba(16, 185, 129, 0.22);
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--error);
-      padding-left: 8px;
-      padding-right: 8px;
-    }
-
-    .spinner {
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(255,255,255,0.35);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      display: none;
-    }
-
-    .btn.loading .spinner { display: inline-block; }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .result-panel {
-      position: sticky;
-      top: 20px;
-    }
-
-    .status-banner {
-      display: none;
-      align-items: center;
-      gap: 12px;
-      padding: 16px 18px;
-      border-radius: 14px;
-      margin-bottom: 16px;
-    }
-
-    .status-banner.visible { display: flex; }
-    .status-banner.ok { background: var(--success-soft); border: 1px solid #a7f3d0; }
-    .status-banner.bad { background: var(--error-soft); border: 1px solid #fecaca; }
-
-    .status-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
+    .inline-grid {
       display: grid;
-      place-items: center;
-      background: white;
-      font-size: 20px;
-      flex-shrink: 0;
+      gap: 12px;
+      grid-template-columns: 1fr;
     }
 
     .tabs {
       display: flex;
-      gap: 8px;
-      margin-bottom: 14px;
+      gap: 10px;
       flex-wrap: wrap;
     }
 
     .tab {
-      border: none;
-      background: #f1f5f9;
-      color: var(--muted);
-      padding: 9px 14px;
+      border: 2px solid var(--sanofi-purple);
+      background: var(--sanofi-white);
+      color: var(--sanofi-purple);
       border-radius: 999px;
+      padding: 10px 16px;
       font: inherit;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
     }
 
     .tab.active {
-      background: var(--primary-soft);
-      color: var(--primary-dark);
+      background: var(--sanofi-purple);
+      color: var(--sanofi-white);
     }
 
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    .result-box {
-      border: 1px solid var(--line);
+    .status-banner {
+      display: none;
+      align-items: center;
+      gap: 12px;
       border-radius: 14px;
-      background: var(--surface-soft);
-      padding: 16px;
+      padding: 14px;
+      border: 2px solid transparent;
+      margin-bottom: 4px;
+    }
+
+    .status-banner.visible { display: flex; }
+
+    .status-banner.ok {
+      background: var(--success-bg);
+      border-color: var(--success-line);
+    }
+
+    .status-banner.bad {
+      background: var(--error-bg);
+      border-color: var(--error-line);
+    }
+
+    .status-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      font-weight: 900;
+      flex-shrink: 0;
+      color: inherit;
+      background: var(--sanofi-white);
+    }
+
+    .result-box {
+      border: 2px solid #e2deec;
+      border-radius: 12px;
+      background: #faf8ff;
+      padding: 14px;
       min-height: 220px;
     }
 
     .empty {
+      min-height: 180px;
       display: grid;
       place-items: center;
       text-align: center;
-      min-height: 180px;
-      color: var(--muted);
-      padding: 20px;
+      color: var(--text-soft);
+      padding: 16px;
     }
 
     .empty-icon {
       font-size: 34px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .issue {
-      background: white;
-      border: 1px solid var(--line);
-      border-left: 4px solid var(--muted);
-      border-radius: 12px;
-      padding: 12px 14px;
-      margin-bottom: 10px;
+      border: 2px solid #dcd7ea;
+      border-left: 8px solid #7a7a85;
+      border-radius: 10px;
+      background: var(--sanofi-white);
+      padding: 10px 12px;
+      margin-bottom: 9px;
     }
 
-    .issue.error { border-left-color: var(--error); background: #fffafa; }
-    .issue.warning { border-left-color: var(--warning); background: #fffdf7; }
-    .issue.info { border-left-color: var(--primary); background: #fcfdff; }
+    .issue.error {
+      border-left-color: var(--error-line);
+      background: #fff5f5;
+    }
+
+    .issue.warning {
+      border-left-color: var(--warning-line);
+      background: var(--warning-bg);
+    }
+
+    .issue.info {
+      border-left-color: var(--sanofi-purple);
+      background: #f7f0ff;
+    }
 
     .issue .meta {
       font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--muted);
-      font-weight: 700;
+      color: var(--text-soft);
     }
 
     .issue .msg {
-      margin-top: 5px;
+      margin-top: 4px;
       font-weight: 700;
       line-height: 1.45;
     }
@@ -563,251 +539,345 @@
     .issue .snippet {
       margin-top: 6px;
       font-size: 13px;
-      color: var(--muted);
-      line-height: 1.45;
+      color: var(--text-soft);
+      line-height: 1.4;
     }
 
     .code-preview {
+      margin: 0;
+      min-height: 220px;
+      max-height: 400px;
+      overflow: auto;
+      background: #11041f;
+      border-radius: 10px;
+      color: #f0deff;
+      padding: 14px;
       white-space: pre-wrap;
       word-break: break-word;
-      max-height: 360px;
-      overflow: auto;
-      background: #0f172a;
-      color: #e2e8f0;
-      padding: 16px;
-      border-radius: 12px;
       font-size: 12px;
-      line-height: 1.55;
-      margin: 0;
+      line-height: 1.45;
     }
 
-    .help-card {
-      margin-top: 18px;
-      padding: 16px 18px;
-      border-radius: 14px;
-      background: rgba(255,255,255,0.72);
-      border: 1px solid var(--line);
+    .action-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.9);
+      border-top: 3px solid var(--sanofi-purple);
+      backdrop-filter: blur(3px);
+      padding: 12px 14px;
     }
 
-    .help-card h3 {
-      margin: 0 0 10px;
-      font-size: 15px;
-    }
-
-    .help-grid {
+    .action-bar-inner {
+      max-width: 1080px;
+      margin: 0 auto;
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px 14px;
-      font-size: 13px;
-      color: var(--muted);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
     }
 
-    @media (max-width: 980px) {
-      .layout,
-      .steps,
-      .form-grid,
-      .brand-box,
-      .help-grid { grid-template-columns: 1fr; }
-      .topbar { flex-direction: column; align-items: flex-start; }
-      .result-panel { position: static; }
+    .btn {
+      min-height: 50px;
+      border-radius: 12px;
+      border: 2px solid transparent;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+
+    .btn:disabled {
+      opacity: 0.52;
+      cursor: not-allowed;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--sanofi-purple);
+      color: var(--sanofi-white);
+      border-color: #bb87f4;
+    }
+
+    .btn-secondary {
+      background: var(--sanofi-white);
+      color: var(--sanofi-purple);
+      border-color: var(--sanofi-purple);
+    }
+
+    .btn-success {
+      background: #0f8f49;
+      color: var(--sanofi-white);
+      border-color: #7fd2a7;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: #930000;
+      border-color: transparent;
+      min-height: 40px;
+      padding: 0 8px;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      border-top-color: var(--sanofi-white);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+
+    .btn.loading .spinner {
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 900px) {
+      .card-head h2 {
+        font-size: 24px;
+      }
+
+      .action-bar-inner {
+        grid-template-columns: 1fr;
+      }
+
+      body {
+        padding-bottom: 206px;
+      }
+
+      .step-card {
+        grid-template-columns: 64px 1fr;
+      }
+
+      .step-number {
+        font-size: 44px;
+      }
     }
   </style>
 </head>
 <body>
   <div id="toast" class="toast"></div>
 
-  <div class="page">
-    <div class="topbar">
-      <div class="logo">
-        <div class="logo-mark">SF</div>
-        <div>
-          <h1>Mindbox → SFMC</h1>
-          <p>Конвертер email-шаблонов для команды</p>
-        </div>
+  <header class="sanofi-header">
+    <div class="header-inner">
+      <div class="wordmark" aria-label="sanofi logo">
+        <span>sanofi</span>
+        <span class="dot dot-1" aria-hidden="true"></span>
+        <span class="dot dot-2" aria-hidden="true"></span>
       </div>
-      <div class="pill">✓ Работает без сервера</div>
+      <h1 class="header-title">Sanofi | Mindbox → SFMC Converter v3</h1>
+      <p class="header-subtitle">Одноколоночный мастер конвертации шаблонов для SFMC.</p>
+      <div class="version-banner">Версия 3.0 — обновлённый интерфейс</div>
     </div>
+  </header>
 
-    <div class="steps">
-      <div class="step active" id="step-indicator-1">
-        <div class="step-num">1</div>
-        <div><strong>Загрузите файл</strong><span>HTML с Mindbox в названии</span></div>
-      </div>
-      <div class="step" id="step-indicator-2">
-        <div class="step-num">2</div>
-        <div><strong>Заполните параметры</strong><span>Campaign и CXQ-метки</span></div>
-      </div>
-      <div class="step" id="step-indicator-3">
-        <div class="step-num">3</div>
-        <div><strong>Скачайте результат</strong><span>Готовый HTML для SFMC</span></div>
-      </div>
-    </div>
-
-    <div class="layout">
-      <div class="card">
-        <div class="card-head">
-          <h2>Настройки конвертации</h2>
-          <p>Откройте этот файл двойным кликом в браузере. Терминал и установка программ не нужны.</p>
-        </div>
-        <div class="card-body">
-          <input type="file" id="file-input" accept=".html,.htm,text/html" hidden>
-
-          <div class="upload-zone" id="upload-zone">
-            <div class="upload-icon">📧</div>
-            <h3>Перетащите HTML-файл сюда</h3>
-            <p>или нажмите, чтобы выбрать файл на компьютере</p>
-          </div>
-
-          <div class="file-chip" id="file-chip">
-            <div class="file-chip-main">
-              <div class="file-chip-icon">📄</div>
-              <div>
-                <div class="file-chip-name" id="file-name"></div>
-                <div class="file-chip-meta" id="file-meta"></div>
-              </div>
-            </div>
-            <button type="button" class="btn btn-ghost" id="clear-file-btn">Удалить</button>
-          </div>
-
-          <div class="section-title">Общие параметры <span class="section-badge">блоки №1–№4</span></div>
-          <div class="form-grid">
-            <div class="field">
-              <label for="data_extension">Data Extension</label>
-              <input id="data_extension" value="Akamai_profiles_consents_bounced">
-              <small>Если источник не Akamai, инструмент предупредит при проверке</small>
-            </div>
-            <div class="field">
-              <label for="personalization_mode">Персонализация</label>
-              <select id="personalization_mode">
-                <option value="de">DE Akamai — MiddleName</option>
-                <option value="manual">Ручная выгрузка — Attribute1</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="privacy_url">Privacy URL</label>
-              <input id="privacy_url" placeholder="https://docsfera.ru/lectures/...">
-              <small>Ссылка на docsfera.ru может отличаться в каждой рассылке</small>
-            </div>
-            <div class="field" id="field-utm">
-              <label for="utm_campaign">utm_campaign *</label>
-              <input id="utm_campaign" placeholder="Campaign_CV_Praluent_Q2_2026">
-            </div>
-          </div>
-
-          <div class="section-title">CXQ-метки <span class="section-badge">блок №5</span></div>
-          <div class="form-grid">
-            <div class="field field-wide">
-              <label for="brand_search">Поиск Brand</label>
-              <input id="brand_search" placeholder="Начните вводить название бренда...">
-            </div>
-            <div class="field field-wide">
-              <label for="cxq_brand">Brand *</label>
-              <div class="brand-box">
-                <div class="brand-list">
-                  <select id="cxq_brand" size="8"></select>
-                </div>
-                <div class="form-grid" style="grid-template-columns:1fr;">
-                  <div class="field">
-                    <label for="cxq_da">DA *</label>
-                    <input id="cxq_da" list="da-list">
-                    <datalist id="da-list"></datalist>
-                  </div>
-                  <div class="field">
-                    <label for="cxq_ta">TA *</label>
-                    <input id="cxq_ta" list="ta-list">
-                    <datalist id="ta-list"></datalist>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="field">
-              <label for="cxq_bu">BU</label>
-              <select id="cxq_bu"></select>
-            </div>
-            <div class="field">
-              <label for="cxq_function">Function</label>
-              <select id="cxq_function"></select>
-            </div>
-            <div class="field">
-              <label for="cxq_cn">CN</label>
-              <select id="cxq_cn"></select>
-            </div>
-          </div>
-
-          <div class="actions">
-            <button type="button" class="btn btn-secondary" id="validate-btn">Только проверить</button>
-            <button type="button" class="btn btn-primary loading-capable" id="convert-btn">
-              <span class="spinner"></span>
-              <span>Конвертировать</span>
-            </button>
-          </div>
+  <main class="page">
+    <section class="wizard-steps">
+      <div class="step-card active" id="step-indicator-1">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <strong>Загрузите исходный Mindbox HTML</strong>
+          <span>Сначала добавьте файл: drag &amp; drop или кнопка выбора.</span>
         </div>
       </div>
-
-      <div class="card result-panel">
-        <div class="card-head">
-          <h2>Результат</h2>
-          <p>Здесь появятся проверка, изменения и готовый файл для скачивания.</p>
+      <div class="step-card" id="step-indicator-2">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <strong>Заполните параметры конвертации</strong>
+          <span>Укажите обязательные поля, затем проверьте шаблон.</span>
         </div>
-        <div class="card-body">
-          <div class="status-banner" id="status-banner">
-            <div class="status-icon" id="status-icon">✓</div>
+      </div>
+      <div class="step-card" id="step-indicator-3">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <strong>Конвертируйте и скачайте результат</strong>
+          <span>Проверьте отчёт снизу и скачайте готовый SFMC HTML.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="wizard-card">
+      <div class="card-head">
+        <h2>Шаг 1. Загрузка файла</h2>
+        <p>Зона загрузки увеличена для максимально заметного и понятного действия.</p>
+      </div>
+      <div class="card-body">
+        <input type="file" id="file-input" accept=".html,.htm,text/html" hidden>
+
+        <div class="upload-zone" id="upload-zone">
+          <div>
+            <div class="upload-icon">⬆</div>
+            <h3>Загрузите HTML-файл сюда</h3>
+            <p><strong>Нажмите или перетащите файл</strong> для старта конвертации Mindbox → SFMC.</p>
+          </div>
+        </div>
+
+        <div class="file-chip" id="file-chip">
+          <div class="file-chip-main">
+            <div class="file-chip-icon">📄</div>
             <div>
-              <strong id="status-title">Готово</strong>
-              <div id="status-text" style="color:var(--muted); font-size:14px; margin-top:4px;"></div>
+              <div class="file-chip-name" id="file-name"></div>
+              <div class="file-chip-meta" id="file-meta"></div>
             </div>
           </div>
+          <button type="button" class="btn btn-ghost" id="clear-file-btn">Удалить файл</button>
+        </div>
+      </div>
+    </section>
 
-          <div class="tabs">
-            <button type="button" class="tab active" data-tab="validation">Проверка</button>
-            <button type="button" class="tab" data-tab="changes">Изменения</button>
-            <button type="button" class="tab" data-tab="preview">HTML</button>
+    <section class="wizard-card">
+      <div class="card-head">
+        <h2>Шаг 2. Параметры</h2>
+        <p>Все поля выстроены в один понятный поток. Обязательные отмечены красной звёздочкой.</p>
+      </div>
+      <div class="card-body">
+        <h3 class="section-title">Основные параметры <span class="section-badge">блоки №1–№4</span></h3>
+        <div class="form-grid">
+          <div class="field">
+            <label for="data_extension">Data Extension</label>
+            <input id="data_extension" value="Akamai_profiles_consents_bounced">
+            <small>Используется в блоке Lookup. Для нестандартного значения появится предупреждение.</small>
           </div>
+          <div class="field">
+            <label for="personalization_mode">Режим персонализации</label>
+            <select id="personalization_mode">
+              <option value="de">DE Akamai — MiddleName</option>
+              <option value="manual">Ручная выгрузка — Attribute1</option>
+            </select>
+            <small>Выберите источник данных для приветствия в блоке №4.</small>
+          </div>
+          <div class="field">
+            <label for="privacy_url">Privacy URL</label>
+            <input id="privacy_url" placeholder="https://docsfera.ru/lectures/...">
+            <small>Ссылка подставляется в Privacy Link блок и может отличаться для каждой кампании.</small>
+          </div>
+          <div class="field" id="field-utm">
+            <label for="utm_campaign">utm_campaign <span class="required">*</span></label>
+            <input id="utm_campaign" placeholder="Campaign_CV_Praluent_Q2_2026">
+            <small>Обязательное поле для корректного построения CXQ-ссылок и проверки.</small>
+          </div>
+        </div>
 
-          <div class="tab-panel active" id="panel-validation">
-            <div class="result-box" id="validation">
-              <div class="empty">
-                <div>
-                  <div class="empty-icon">🔍</div>
-                  <div>Загрузите файл и нажмите «Конвертировать» или «Только проверить»</div>
-                </div>
+        <h3 class="section-title">CXQ-метки <span class="section-badge">блок №5</span></h3>
+        <div class="form-grid">
+          <div class="field">
+            <label for="brand_search">Поиск бренда</label>
+            <input id="brand_search" placeholder="Введите часть названия бренда...">
+            <small>Фильтрует список Brand в реальном времени.</small>
+          </div>
+          <div class="field">
+            <label for="cxq_brand">Brand <span class="required">*</span></label>
+            <div class="brand-box">
+              <div class="brand-list">
+                <select id="cxq_brand" size="8"></select>
               </div>
             </div>
+            <small>Выберите бренд, затем проверьте автоподстановку DA/TA.</small>
           </div>
-
-          <div class="tab-panel" id="panel-changes">
-            <div class="result-box" id="changes">
-              <div class="empty">
-                <div>
-                  <div class="empty-icon">🛠</div>
-                  <div>Список изменений появится после конвертации</div>
-                </div>
-              </div>
+          <div class="inline-grid">
+            <div class="field">
+              <label for="cxq_da">DA <span class="required">*</span></label>
+              <input id="cxq_da" list="da-list">
+              <datalist id="da-list"></datalist>
+              <small>Обязательное поле. Влияет на параметры URL CXQ.</small>
             </div>
-            <div class="result-box" id="warnings" style="margin-top:12px; display:none;"></div>
+            <div class="field">
+              <label for="cxq_ta">TA <span class="required">*</span></label>
+              <input id="cxq_ta" list="ta-list">
+              <datalist id="ta-list"></datalist>
+              <small>Обязательное поле. Используется в каждой ссылке рейтинга R=1..7.</small>
+            </div>
           </div>
-
-          <div class="tab-panel" id="panel-preview">
-            <pre class="code-preview" id="preview">HTML-код появится после конвертации.</pre>
+          <div class="field">
+            <label for="cxq_bu">BU</label>
+            <select id="cxq_bu"></select>
+            <small>По умолчанию GENERAL MEDICINES.</small>
           </div>
-
-          <div class="actions">
-            <button type="button" class="btn btn-success" id="download-btn" disabled>⬇ Скачать SFMC HTML</button>
+          <div class="field">
+            <label for="cxq_function">Function</label>
+            <select id="cxq_function"></select>
+            <small>По умолчанию Commercial.</small>
+          </div>
+          <div class="field">
+            <label for="cxq_cn">CN</label>
+            <select id="cxq_cn"></select>
+            <small>По умолчанию journey.</small>
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="help-card">
-      <h3>Что проверяет инструмент</h3>
-      <div class="help-grid">
-        <div>№1 — AMPscript и Lookup DE</div>
-        <div>№2 — метаданные кампании</div>
-        <div>№3 — ссылка «сюда» на view online</div>
-        <div>№4 — персонализация и Privacy Link</div>
-        <div>№5 — CXQ-опрос с UTM-метками</div>
-        <div>№6 — отписка через ContentBlock 1649</div>
+    <section class="wizard-card">
+      <div class="card-head">
+        <h2>Шаг 3. Результаты и контроль качества</h2>
+        <p>Внизу — отчёт проверки, изменения после конвертации, предупреждения и предпросмотр HTML.</p>
       </div>
+      <div class="card-body">
+        <div class="status-banner" id="status-banner">
+          <div class="status-icon" id="status-icon">✓</div>
+          <div>
+            <strong id="status-title">Готово</strong>
+            <div id="status-text" style="font-size:14px; margin-top:4px;"></div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button type="button" class="tab active" data-tab="validation">Проверка</button>
+          <button type="button" class="tab" data-tab="changes">Изменения</button>
+          <button type="button" class="tab" data-tab="preview">HTML</button>
+        </div>
+
+        <div class="tab-panel active" id="panel-validation">
+          <div class="result-box" id="validation">
+            <div class="empty">
+              <div>
+                <div class="empty-icon">🔍</div>
+                <div>Нажмите «Проверить HTML» или «Конвертировать в SFMC», чтобы увидеть статус.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="panel-changes">
+          <div class="result-box" id="changes">
+            <div class="empty">
+              <div>
+                <div class="empty-icon">🛠</div>
+                <div>Список фактических изменений отобразится после конвертации.</div>
+              </div>
+            </div>
+          </div>
+          <div class="result-box" id="warnings" style="margin-top:12px; display:none;"></div>
+        </div>
+
+        <div class="tab-panel" id="panel-preview">
+          <pre class="code-preview" id="preview">HTML-код появится после конвертации.</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="action-bar">
+    <div class="action-bar-inner">
+      <button type="button" class="btn btn-secondary" id="validate-btn">Проверить HTML</button>
+      <button type="button" class="btn btn-primary loading-capable" id="convert-btn">
+        <span class="spinner"></span>
+        <span>Конвертировать в SFMC</span>
+      </button>
+      <button type="button" class="btn btn-success" id="download-btn" disabled>Скачать SFMC HTML</button>
     </div>
   </div>
 
