@@ -40,6 +40,7 @@ function init() {
   populateSelectOptions(functionSelect, cxqData.unique_values?.Function || ['Commercial', 'Medical'], 'Commercial');
   populateSelectOptions(cnSelect, cxqData.unique_values?.CN || ['journey', 'promo'], 'journey');
   renderBrandOptions(allBrands);
+  updateUtmRequiredState();
   bindEvents();
   checkServer();
   goToStep(1);
@@ -71,6 +72,7 @@ function bindEvents() {
   });
 
   brandSelect.addEventListener('change', applyBrandDefaults);
+  cnSelect.addEventListener('change', updateUtmRequiredState);
 
   document.querySelectorAll('.step-link').forEach((button) => {
     button.addEventListener('click', () => goToStep(Number(button.dataset.step)));
@@ -148,7 +150,25 @@ function getFormData() {
   return data;
 }
 
+function isUtmCampaignRequired() {
+  return cnSelect.value.trim().toLowerCase() !== 'promo';
+}
+
+function updateUtmRequiredState() {
+  const required = isUtmCampaignRequired();
+  const field = document.getElementById('field-utm');
+  const marker = document.getElementById('utm-required');
+  const help = document.getElementById('utm-help');
+  marker.hidden = !required;
+  field.classList.toggle('optional', !required);
+  help.textContent = required
+    ? 'Обязательное поле. Подставляется в CXQ-ссылки, если CN не promo.'
+    : 'Не используется при CN=promo — можно оставить пустым.';
+  if (!required) field.classList.remove('invalid');
+}
+
 function validateForm() {
+  updateUtmRequiredState();
   if (!selectedFile) {
     showAlert('Сначала загрузите HTML-файл.', 'error');
     goToStep(1);
@@ -159,9 +179,14 @@ function validateForm() {
   const brand = form.cxq_brand.value.trim();
   const da = form.cxq_da.value.trim();
   const ta = form.cxq_ta.value.trim();
+  const missing = [];
+  if (isUtmCampaignRequired() && !utmCampaign) missing.push('utm_campaign');
+  if (!brand) missing.push('Brand');
+  if (!da) missing.push('DA');
+  if (!ta) missing.push('TA');
 
-  if (!utmCampaign || !brand || !da || !ta) {
-    showAlert('Заполните обязательные поля: utm_campaign, Brand, DA и TA.', 'error');
+  if (missing.length) {
+    showAlert(`Заполните: ${missing.join(', ')}.`, 'error');
     goToStep(2);
     return false;
   }
@@ -304,6 +329,7 @@ function applyBrandDefaults() {
   if (row.BU) buSelect.value = row.BU;
   if (row.Function) functionSelect.value = row.Function;
   if (row.CN) cnSelect.value = row.CN;
+  updateUtmRequiredState();
 
   fillDatalist('da-options', [...new Set(rows.map((row) => row.DA).filter(Boolean))]);
   fillDatalist('ta-options', [...new Set(rows.map((row) => row.TA).filter(Boolean))]);

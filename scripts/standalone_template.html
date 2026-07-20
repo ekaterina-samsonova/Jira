@@ -680,7 +680,7 @@
       </div>
       <h1 class="header-title">Sanofi | Mindbox → SFMC Converter v3</h1>
       <p class="header-subtitle">Одноколоночный мастер конвертации шаблонов для SFMC.</p>
-      <div class="version-banner">Версия 3.2 — utm после CN, персонализация Mindbox</div>
+      <div class="version-banner">Версия 3.3 — utm_campaign обязателен только если CN не promo</div>
     </div>
   </header>
 
@@ -807,9 +807,9 @@
             <small>По умолчанию journey. Для promo utm_campaign в CXQ не добавляется.</small>
           </div>
           <div class="field field-wide" id="field-utm">
-            <label for="utm_campaign">utm_campaign <span class="required">*</span></label>
+            <label for="utm_campaign">utm_campaign <span class="required" id="utm-required" hidden>*</span></label>
             <input id="utm_campaign" placeholder="Campaign_CV_Praluent_Q2_2026">
-            <small>Обязательное поле. Подставляется в CXQ-ссылки, если CN не promo.</small>
+            <small id="utm-help">Подставляется в CXQ-ссылки, если CN не promo.</small>
           </div>
         </div>
       </div>
@@ -1236,7 +1236,25 @@
       els.statusText.textContent = text;
     }
 
+    function isUtmCampaignRequired() {
+      return document.getElementById("cxq_cn").value.trim().toLowerCase() !== "promo";
+    }
+
+    function updateUtmRequiredState() {
+      const required = isUtmCampaignRequired();
+      const field = document.getElementById("field-utm");
+      const marker = document.getElementById("utm-required");
+      const help = document.getElementById("utm-help");
+      marker.hidden = !required;
+      field.classList.toggle("optional", !required);
+      help.textContent = required
+        ? "Обязательное поле. Подставляется в CXQ-ссылки, если CN не promo."
+        : "Не используется при CN=promo — можно оставить пустым.";
+      if (!required) field.classList.remove("invalid");
+    }
+
     function validateForm() {
+      updateUtmRequiredState();
       document.getElementById("field-utm").classList.remove("invalid");
       if (!selectedFile) {
         toast("Сначала загрузите HTML-файл", "error");
@@ -1245,10 +1263,18 @@
       }
       const p = getParams();
       let ok = true;
-      if (!p.utm_campaign) { document.getElementById("field-utm").classList.add("invalid"); ok = false; }
+      if (isUtmCampaignRequired() && !p.utm_campaign) {
+        document.getElementById("field-utm").classList.add("invalid");
+        ok = false;
+      }
       if (!p.cxq_brand || !p.cxq_da || !p.cxq_ta) ok = false;
       if (!ok) {
-        toast("Заполните utm_campaign, Brand, DA и TA", "error");
+        const missing = [];
+        if (isUtmCampaignRequired() && !p.utm_campaign) missing.push("utm_campaign");
+        if (!p.cxq_brand) missing.push("Brand");
+        if (!p.cxq_da) missing.push("DA");
+        if (!p.cxq_ta) missing.push("TA");
+        toast(`Заполните: ${missing.join(", ")}`, "error");
         setStep(2);
         return false;
       }
@@ -1308,6 +1334,7 @@
       if (row.BU) document.getElementById("cxq_bu").value = row.BU;
       if (row.Function) document.getElementById("cxq_function").value = row.Function;
       if (row.CN) document.getElementById("cxq_cn").value = row.CN;
+      updateUtmRequiredState();
       document.getElementById("da-list").innerHTML = [...new Set(rows.map((r) => r.DA).filter(Boolean))].map((v) => `<option value="${escapeHtml(v)}"></option>`).join("");
       document.getElementById("ta-list").innerHTML = [...new Set(rows.map((r) => r.TA).filter(Boolean))].map((v) => `<option value="${escapeHtml(v)}"></option>`).join("");
     }
@@ -1330,6 +1357,7 @@
       renderBrands(filtered.length ? filtered : CXQ.brands);
     };
     els.brandSelect.onchange = applyBrandDefaults;
+    document.getElementById("cxq_cn").onchange = updateUtmRequiredState;
     document.querySelectorAll(".tab").forEach((tab) => tab.onclick = () => switchTab(tab.dataset.tab));
 
     document.getElementById("validate-btn").onclick = async () => {
@@ -1393,6 +1421,7 @@
     populateSelect("cxq_function", CXQ.unique_values?.Function, "Commercial");
     populateSelect("cxq_cn", CXQ.unique_values?.CN, "journey");
     renderBrands(CXQ.brands || []);
+    updateUtmRequiredState();
     setStep(1);
   </script>
 </body>
