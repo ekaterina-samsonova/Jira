@@ -71,7 +71,10 @@ async def index(request: Request) -> HTMLResponse:
     )
 
 
-@app.get("/api/cxq")
+@app.get("/health")
+async def health() -> JSONResponse:
+    return JSONResponse({"status": "ok"})
+
 async def cxq_data() -> JSONResponse:
     return JSONResponse(load_cxq_data())
 

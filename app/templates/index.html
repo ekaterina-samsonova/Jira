@@ -7,122 +7,205 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>Mindbox → SFMC Converter</h1>
-      <p class="subtitle">
-        Загрузите HTML-файл Mindbox, заполните параметры CXQ и получите готовый шаблон для SFMC с проверкой обязательных блоков.
-      </p>
-    </header>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">SF</div>
+        <div>
+          <strong>Mindbox → SFMC</strong>
+          <span>Конвертер email-шаблонов</span>
+        </div>
+      </div>
 
-    <main class="layout">
-      <section class="panel">
-        <h2>1. Загрузка файла</h2>
-        <form id="convert-form">
-          <div class="dropzone" id="dropzone">
-            <input type="file" id="file-input" name="file" accept=".html,.htm" required>
-            <p>Перетащите HTML с «Mindbox» в названии или нажмите для выбора</p>
-            <p class="file-name" id="file-name">Файл не выбран</p>
+      <nav class="steps-nav">
+        <button type="button" class="step-link active" data-step="1">1. Файл</button>
+        <button type="button" class="step-link" data-step="2">2. Параметры</button>
+        <button type="button" class="step-link" data-step="3">3. Результат</button>
+      </nav>
+
+      <div class="help-box">
+        <h3>Обязательные блоки</h3>
+        <ul>
+          <li><b>№1</b> AMPscript в начале</li>
+          <li><b>№2</b> Метаданные после &lt;/head&gt;</li>
+          <li><b>№3</b> Ссылка «сюда»</li>
+          <li><b>№4</b> Персонализация + Privacy</li>
+          <li><b>№5</b> CXQ-опрос</li>
+          <li><b>№6</b> Отписка</li>
+        </ul>
+      </div>
+
+      <div class="server-status" id="server-status">Проверка сервера...</div>
+    </aside>
+
+    <main class="content">
+      <header class="page-header">
+        <div>
+          <h1>Конвертация HTML Mindbox в SFMC</h1>
+          <p>Загрузите шаблон, заполните CXQ-параметры и скачайте готовый HTML для Salesforce Marketing Cloud.</p>
+        </div>
+      </header>
+
+      <div id="alert-bar" class="alert hidden"></div>
+
+      <form id="convert-form" novalidate>
+        <section class="card step-panel active" data-step-panel="1">
+          <div class="card-header">
+            <h2>Шаг 1. Загрузите HTML-файл</h2>
+            <p>Ожидается файл с «Mindbox» в названии. Визуал может отличаться — скрипты и токены будут приведены к SFMC.</p>
           </div>
 
-          <h2>2. Параметры конвертации</h2>
-          <div class="grid">
-            <label>
-              Data Extension (блок №1)
-              <input type="text" name="data_extension" value="Akamai_profiles_consents_bounced">
-            </label>
-            <label>
-              Режим персонализации
-              <select name="personalization_mode">
-                <option value="de">DE Akamai (MiddleName)</option>
-                <option value="manual">Ручная выгрузка (Attribute1)</option>
-              </select>
-            </label>
-            <label>
-              Privacy URL (docsfera.ru)
-              <input type="url" name="privacy_url" placeholder="https://docsfera.ru/lectures/...">
-            </label>
-            <label>
-              utm_campaign
-              <input type="text" name="utm_campaign" placeholder="Campaign_CV_Praluent_Q2_2026" required>
-            </label>
+          <div class="upload-area" id="upload-area">
+            <input type="file" id="file-input" accept=".html,.htm,text/html" hidden>
+            <div class="upload-icon">📄</div>
+            <p class="upload-title">Перетащите файл сюда</p>
+            <p class="upload-subtitle">или</p>
+            <button type="button" class="btn btn-outline" id="browse-btn">Выбрать файл на компьютере</button>
           </div>
 
-          <h3>CXQ-параметры (блок №5)</h3>
-          <div class="grid">
-            <label>
-              Brand
-              <select name="cxq_brand" id="cxq-brand" required>
-                <option value="">— выберите —</option>
-                {% for brand in cxq.brands %}
-                <option value="{{ brand }}">{{ brand }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label>
-              DA
-              <input type="text" name="cxq_da" id="cxq-da" list="da-options" required>
-              <datalist id="da-options"></datalist>
-            </label>
-            <label>
-              TA
-              <input type="text" name="cxq_ta" id="cxq-ta" list="ta-options" required>
-              <datalist id="ta-options"></datalist>
-            </label>
-            <label>
-              BU
-              <select name="cxq_bu" id="cxq-bu">
-                {% for value in cxq.unique_values.get('BU', []) if value %}
-                <option value="{{ value }}" {% if value == 'GENERAL MEDICINES' %}selected{% endif %}>{{ value }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label>
-              Function
-              <select name="cxq_function" id="cxq-function">
-                {% for value in cxq.unique_values.get('Function', []) if value %}
-                <option value="{{ value }}" {% if value == 'Commercial' %}selected{% endif %}>{{ value }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label>
-              CN
-              <select name="cxq_cn" id="cxq-cn">
-                {% for value in cxq.unique_values.get('CN', []) if value %}
-                <option value="{{ value }}" {% if value == 'journey' %}selected{% endif %}>{{ value }}</option>
-                {% endfor %}
-              </select>
-            </label>
+          <div class="file-card hidden" id="file-card">
+            <div>
+              <div class="file-label">Выбранный файл</div>
+              <div class="file-name" id="file-name"></div>
+            </div>
+            <button type="button" class="btn btn-text" id="clear-file-btn">Удалить</button>
+          </div>
+        </section>
+
+        <section class="card step-panel" data-step-panel="2">
+          <div class="card-header">
+            <h2>Шаг 2. Параметры конвертации</h2>
+            <p>Укажите источник данных, кампанию и CXQ-метки по таблице Excel.</p>
           </div>
 
-          <div class="actions">
-            <button type="button" class="btn secondary" id="validate-btn">Проверить без конвертации</button>
-            <button type="submit" class="btn primary" id="convert-btn">Конвертировать</button>
-            <button type="button" class="btn success" id="download-btn" disabled>Скачать SFMC HTML</button>
-          </div>
-        </form>
-      </section>
+          <div class="form-section">
+            <h3>Общие настройки</h3>
+            <div class="form-grid">
+              <label class="field">
+                <span>Data Extension (блок №1)</span>
+                <input type="text" name="data_extension" value="Akamai_profiles_consents_bounced">
+                <small>Если источник не Akamai — инструмент предупредит при проверке</small>
+              </label>
 
-      <section class="panel results">
-        <h2>Результаты</h2>
-        <div id="changes" class="box hidden"></div>
-        <div id="warnings" class="box hidden"></div>
-        <div id="validation" class="box"></div>
-        <details id="preview-wrap" class="hidden">
-          <summary>Предпросмотр HTML</summary>
-          <pre id="preview"></pre>
-        </details>
-      </section>
+              <label class="field">
+                <span>Режим персонализации</span>
+                <select name="personalization_mode">
+                  <option value="de">DE Akamai — MiddleName</option>
+                  <option value="manual">Ручная выгрузка — Attribute1</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>Privacy URL (docsfera.ru)</span>
+                <input type="text" name="privacy_url" placeholder="https://docsfera.ru/lectures/...">
+                <small>URL может отличаться от рассылки к рассылке</small>
+              </label>
+
+              <label class="field">
+                <span>utm_campaign *</span>
+                <input type="text" name="utm_campaign" placeholder="Campaign_CV_Praluent_Q2_2026">
+              </label>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>CXQ-параметры (блок №5)</h3>
+            <div class="form-grid">
+              <label class="field field-wide">
+                <span>Brand *</span>
+                <input type="search" id="brand-search" placeholder="Начните вводить название бренда...">
+                <select name="cxq_brand" id="cxq-brand" size="6"></select>
+              </label>
+
+              <label class="field">
+                <span>DA *</span>
+                <input type="text" name="cxq_da" id="cxq-da" list="da-options">
+                <datalist id="da-options"></datalist>
+              </label>
+
+              <label class="field">
+                <span>TA *</span>
+                <input type="text" name="cxq_ta" id="cxq-ta" list="ta-options">
+                <datalist id="ta-options"></datalist>
+              </label>
+
+              <label class="field">
+                <span>BU</span>
+                <select name="cxq_bu" id="cxq-bu"></select>
+              </label>
+
+              <label class="field">
+                <span>Function</span>
+                <select name="cxq_function" id="cxq-function"></select>
+              </label>
+
+              <label class="field">
+                <span>CN</span>
+                <select name="cxq_cn" id="cxq-cn"></select>
+              </label>
+            </div>
+          </div>
+
+          <div class="actions-row">
+            <button type="button" class="btn btn-secondary" id="back-step-2">← Назад</button>
+            <button type="button" class="btn btn-secondary" id="validate-btn">Только проверить</button>
+            <button type="submit" class="btn btn-primary" id="convert-btn">
+              <span class="btn-label">Конвертировать</span>
+              <span class="btn-spinner hidden"></span>
+            </button>
+          </div>
+        </section>
+
+        <section class="card step-panel" data-step-panel="3">
+          <div class="card-header">
+            <h2>Шаг 3. Результат</h2>
+            <p>Проверьте ошибки и скачайте готовый файл для SFMC.</p>
+          </div>
+
+          <div class="result-summary hidden" id="result-summary">
+            <div class="summary-card success" id="summary-success">
+              <strong>Готово</strong>
+              <span>Шаблон сконвертирован</span>
+            </div>
+            <div class="summary-card error hidden" id="summary-error">
+              <strong>Есть ошибки</strong>
+              <span>Исправьте замечания перед отправкой в SFMC</span>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <button type="button" class="tab active" data-tab="validation">Проверка</button>
+            <button type="button" class="tab" data-tab="changes">Изменения</button>
+            <button type="button" class="tab" data-tab="preview">HTML</button>
+          </div>
+
+          <div class="tab-panel active" id="tab-validation">
+            <div id="validation" class="result-box empty-state">
+              <p>Загрузите файл и нажмите «Конвертировать» или «Только проверить».</p>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="tab-changes">
+            <div id="changes" class="result-box empty-state">
+              <p>Список изменений появится после конвертации.</p>
+            </div>
+            <div id="warnings" class="result-box hidden"></div>
+          </div>
+
+          <div class="tab-panel" id="tab-preview">
+            <pre id="preview" class="code-preview">HTML-код появится после конвертации.</pre>
+          </div>
+
+          <div class="actions-row">
+            <button type="button" class="btn btn-secondary" id="back-step-3">← К параметрам</button>
+            <button type="button" class="btn btn-success" id="download-btn" disabled>Скачать SFMC HTML</button>
+          </div>
+        </section>
+      </form>
     </main>
-
-    <footer>
-      <p>Обязательные блоки: №1 AMPscript, №2 метаданные, №3 view online, №4 персонализация/privacy, №5 CXQ, №6 отписка.</p>
-    </footer>
   </div>
 
-  <script>
-    window.CXQ_ROWS = {{ cxq.rows | tojson }};
-  </script>
+  <script id="cxq-data" type="application/json">{{ cxq | tojson }}</script>
   <script src="/static/app.js"></script>
 </body>
 </html>
