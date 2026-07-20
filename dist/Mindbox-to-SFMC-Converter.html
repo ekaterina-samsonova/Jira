@@ -680,7 +680,7 @@
       </div>
       <h1 class="header-title">Sanofi | Mindbox → SFMC Converter v3</h1>
       <p class="header-subtitle">Одноколоночный мастер конвертации шаблонов для SFMC.</p>
-      <div class="version-banner">Версия 3.0 — обновлённый интерфейс</div>
+      <div class="version-banner">Версия 3.1 — блок №3, Privacy auto, CXQ utm</div>
     </div>
   </header>
 
@@ -759,15 +759,10 @@
             </select>
             <small>Выберите источник данных для приветствия в блоке №4.</small>
           </div>
-          <div class="field">
-            <label for="privacy_url">Privacy URL</label>
-            <input id="privacy_url" placeholder="https://docsfera.ru/lectures/...">
-            <small>Ссылка подставляется в Privacy Link блок и может отличаться для каждой кампании.</small>
-          </div>
           <div class="field" id="field-utm">
             <label for="utm_campaign">utm_campaign <span class="required">*</span></label>
             <input id="utm_campaign" placeholder="Campaign_CV_Praluent_Q2_2026">
-            <small>Обязательное поле для корректного построения CXQ-ссылок и проверки.</small>
+            <small>Обязательное поле. В CXQ-ссылках используется, если CN не равен promo.</small>
           </div>
         </div>
 
@@ -939,7 +934,6 @@
       return {
         data_extension: document.getElementById("data_extension").value.trim(),
         personalization_mode: document.getElementById("personalization_mode").value,
-        privacy_url: document.getElementById("privacy_url").value.trim(),
         utm_campaign: document.getElementById("utm_campaign").value.trim(),
         cxq_brand: document.getElementById("cxq_brand").value.trim(),
         cxq_da: document.getElementById("cxq_da").value.trim(),
@@ -962,6 +956,57 @@
       return '<a href="%%view_email_url%%" style="color:#b9b9b9; text-decoration:underline;" target="_blank">сюда</a>';
     }
 
+    function extractPrivacyUrl(html) {
+      const links = html.match(/https?:\/\/docsfera\.ru\/[^\s"'<>]+/gi) || [];
+      const candidates = [];
+      links.forEach((url) => {
+        const lower = url.toLowerCase();
+        if (lower.includes("unsubscribe") || lower.includes("voting/cxq") || lower.includes("/personal/unsubscribe")) return;
+        let score = 0;
+        if (/(lectures|lecture|policy|politic|privacy|confiden)/i.test(lower)) score += 2;
+        candidates.push({ score, url: url.replace(/\/$/, "") });
+      });
+      candidates.sort((a, b) => b.score - a.score || b.url.length - a.url.length);
+      return candidates[0]?.url || "";
+    }
+
+    function replaceViewInBrowser(html) {
+      const link = block3Link();
+      let result = html;
+      let changed = false;
+
+      const anchorFixed = result.replace(/<a\b[^>]*href=(["'])[^"']*\1[^>]*>\s*сюда\s*<\/a>/gi, () => {
+        changed = true;
+        return link;
+      });
+      result = anchorFixed;
+
+      const patterns = [
+        /(Если[^<]{0,180}отображается\s+некорректно[^<]*?)(?:нажмите\s*)?(?:<a\b[^>]*>[^<]*<\/a>|сюда|здесь)/i,
+        /(Если\s+(?:данное\s+)?письмо[^<]{0,180}отображается\s+некорректно[^<]*?)(<a\b[^>]*>[^<]*<\/a>|сюда|здесь)/i,
+      ];
+      for (const pattern of patterns) {
+        if (pattern.test(result)) {
+          result = result.replace(pattern, `$1${link}`);
+          changed = true;
+          break;
+        }
+      }
+
+      if (!result.includes('href="%%view_email_url%%"') && /отображается\s+некорректно/i.test(result)) {
+        const updated = result.replace(
+          /(отображается\s+некорректно[^<]{0,120}?)(?:нажмите\s*)?(?:<a\b[^>]*>[^<]*<\/a>|сюда|здесь)/i,
+          `$1${link}`
+        );
+        if (updated !== result) {
+          result = updated;
+          changed = true;
+        }
+      }
+
+      return { html: result, changed };
+    }
+
     function block4Personalization(p) {
       return p.personalization_mode === "manual"
         ? "Здравствуйте, %%=v(@title)=%% %%=v(FirstName)=%% %%=v(Attribute1)=%%!"
@@ -974,7 +1019,11 @@
 
     function buildCxqUrl(p, rating) {
       const enc = (v) => encodeURIComponent(String(v).replace(/ /g, "_").toUpperCase());
-      return `${CXQ_BASE_URL}?Channel=email&R=${rating}&Brand=${enc(p.cxq_brand)}&DA=${enc(p.cxq_da)}&TA=${enc(p.cxq_ta)}&Franchise=${enc(p.cxq_da)}&BU=${enc(p.cxq_bu)}&Function=${encodeURIComponent(p.cxq_function.replace(/ /g, "_"))}&CN=${encodeURIComponent(p.cxq_cn)}&utm_campaign=${encodeURIComponent(p.utm_campaign)}`;
+      let url = `${CXQ_BASE_URL}?Channel=email&R=${rating}&Brand=${enc(p.cxq_brand)}&DA=${enc(p.cxq_da)}&TA=${enc(p.cxq_ta)}&Franchise=${enc(p.cxq_da)}&BU=${enc(p.cxq_bu)}&Function=${encodeURIComponent(p.cxq_function.replace(/ /g, "_"))}&CN=${encodeURIComponent(p.cxq_cn)}`;
+      if (p.cxq_cn.toLowerCase() !== "promo" && p.utm_campaign) {
+        url += `&utm_campaign=${encodeURIComponent(p.utm_campaign)}`;
+      }
+      return url;
     }
 
     function block5Cxq(p) {
@@ -1022,14 +1071,10 @@
         else { result = updated; changes.push("Добавлен блок №2"); }
       }
 
-      const link = block3Link();
-      const m = result.match(/(Если данное письмо отображается некорректно[^<]*)(?:нажмите\s+)?(сюда)/i);
-      if (m) {
-        result = result.replace(m[0], m[1] + link);
-        changes.push("Обновлена ссылка «сюда» (блок №3)");
-      } else {
-        warnings.push("Блок №3: не найден текст про некорректное отображение");
-      }
+      const viewResult = replaceViewInBrowser(result);
+      result = viewResult.html;
+      if (viewResult.changed) changes.push("Обновлена ссылка «сюда» на %%view_email_url%% (блок №3)");
+      else warnings.push("Блок №3: не найден текст про некорректное отображение");
 
       const greeting = block4Personalization(p);
       const persPatterns = [/Здравствуйте[^!<\n]{0,120}!?/i, /Добрый\s+день[^!<\n]{0,120}!?/i, /\$\{Recipient\.[^}]+\}/i, /\{\{[^}]+\}\}/];
@@ -1040,18 +1085,30 @@
       if (replacedPers) changes.push("Обновлена персонализация (блок №4)");
       else warnings.push("Блок №4: не найдено приветствие");
 
-      if (p.privacy_url) {
+      const privacyUrl = extractPrivacyUrl(html);
+      if (privacyUrl) {
         if (result.includes("Start--Privacy Link goes here")) {
-          result = result.replace(/<!-----Start--Privacy Link goes here[\s\S]*?<!-----END---Privacy Link goes here ---->/i, block4Privacy(p.privacy_url));
-        } else if (/<\/body>/i.test(result)) {
-          result = result.replace(/<\/body>/i, block4Privacy(p.privacy_url) + "\n</body>");
+          result = result.replace(/<!-----Start--Privacy Link goes here[\s\S]*?<!-----END---Privacy Link goes here ---->/i, block4Privacy(privacyUrl));
         } else {
-          result += "\n" + block4Privacy(p.privacy_url);
+          const escaped = privacyUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const anchorPattern = new RegExp(`<a\\b[^>]*href=["']${escaped}/?["'][^>]*>[\\s\\S]*?<\\/a>`, "i");
+          if (anchorPattern.test(result)) {
+            result = result.replace(anchorPattern, block4Privacy(privacyUrl));
+          } else if (/<\/body>/i.test(result)) {
+            result = result.replace(/<\/body>/i, block4Privacy(privacyUrl) + "\n</body>");
+          } else {
+            result += "\n" + block4Privacy(privacyUrl);
+          }
         }
-        changes.push("Обновлен Privacy Link");
+        changes.push(`Обновлен Privacy Link из HTML (${privacyUrl})`);
+      } else {
+        warnings.push("Блок №4 (Privacy): ссылка docsfera.ru не найдена в исходном HTML");
       }
 
-      if (p.utm_campaign && p.cxq_brand) {
+      if (p.cxq_brand) {
+        if (p.cxq_cn.toLowerCase() !== "promo" && !p.utm_campaign) {
+          warnings.push("Блок №5: utm_campaign обязателен для CXQ, когда CN не promo");
+        }
         const cxqBlock = block5Cxq(p);
         const section = /(Насколько\s+информация\s+в\s+письме\s+соответствовала\s+вашим\s+потребностям\?)[\s\S]{0,4000}?(?=<\/td>|<\/tr>|<\/table>|<\/body>|$)/i;
         if (section.test(result)) {
@@ -1061,7 +1118,7 @@
           warnings.push("Блок №5: CXQ-секция не найдена");
         }
       } else {
-        warnings.push("Блок №5: укажите utm_campaign и Brand");
+        warnings.push("Блок №5: укажите Brand");
       }
 
       const unsub = block6Unsubscribe();
@@ -1102,6 +1159,14 @@
         urls.forEach((url) => {
           const rm = url.match(/[?&]R=(\d)/i);
           if (rm) ratings.add(Number(rm[1]));
+          const params = new URLSearchParams(url.split("?")[1] || "");
+          const cn = (params.get("CN") || "").toLowerCase();
+          if (cn !== "promo" && !params.get("utm_campaign")) {
+            add("Блок №5 (CXQ)", "error", "В CXQ-ссылке отсутствует utm_campaign", "Добавьте utm_campaign, если CN не promo", url.slice(0, 200));
+          }
+          if (cn === "promo" && params.get("utm_campaign")) {
+            add("Блок №5 (CXQ)", "error", "utm_campaign не должен быть в CXQ-ссылке при CN=promo", "Уберите utm_campaign для promo", url.slice(0, 200));
+          }
         });
         if (ratings.size < 7) add("Блок №5", "warning", `Найдено оценок R: ${[...ratings].sort()} — нужно 7`, "Каждая кнопка R=1..7");
       }

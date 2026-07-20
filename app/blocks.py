@@ -102,12 +102,13 @@ def build_cxq_url(params: ConversionParams, rating: int) -> str:
     bu = params.cxq_bu.replace(" ", "_").upper()
     function = params.cxq_function.replace(" ", "_")
     cn = params.cxq_cn
-    campaign = params.utm_campaign
-    return (
+    url = (
         f"{CXQ_BASE_URL}?Channel=email&R={rating}&Brand={brand}&DA={da}&TA={ta}"
         f"&Franchise={franchise}&BU={bu}&Function={function}&CN={cn}"
-        f"&utm_campaign={campaign}"
     )
+    if params.cxq_cn.lower() != "promo" and params.utm_campaign:
+        url += f"&utm_campaign={params.utm_campaign}"
+    return url
 
 
 def block5_cxq(params: ConversionParams) -> str:

@@ -150,7 +150,10 @@ def _validate_block4(report: ValidationReport, html: str) -> None:
 def _validate_cxq_url(report: ValidationReport, url: str) -> None:
     parsed = urlparse(url)
     params = parse_qs(parsed.query)
-    required = ["Channel", "R", "Brand", "DA", "TA", "Franchise", "BU", "Function", "CN", "utm_campaign"]
+    cn = params.get("CN", [""])[0].lower()
+    required = ["Channel", "R", "Brand", "DA", "TA", "Franchise", "BU", "Function", "CN"]
+    if cn != "promo":
+        required.append("utm_campaign")
     missing = [p for p in required if p not in params or not params[p][0]]
     if missing:
         report.add(
@@ -158,6 +161,14 @@ def _validate_cxq_url(report: ValidationReport, url: str) -> None:
             "error",
             f"В CXQ-ссылке отсутствуют параметры: {', '.join(missing)}",
             hint="Заполните параметры CXQ по таблице Excel",
+            snippet=url[:200],
+        )
+    if cn == "promo" and params.get("utm_campaign", [""])[0]:
+        report.add(
+            "Блок №5 (CXQ)",
+            "error",
+            "utm_campaign не должен быть в CXQ-ссылке при CN=promo",
+            hint="Уберите utm_campaign для promo-рассылок",
             snippet=url[:200],
         )
     if params.get("Channel", [""])[0].lower() != "email":
