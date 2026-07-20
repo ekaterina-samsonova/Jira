@@ -680,7 +680,7 @@
       </div>
       <h1 class="header-title">Sanofi | Mindbox → SFMC Converter v3</h1>
       <p class="header-subtitle">Одноколоночный мастер конвертации шаблонов для SFMC.</p>
-      <div class="version-banner">Версия 3.1 — блок №3, Privacy auto, CXQ utm</div>
+      <div class="version-banner">Версия 3.2 — utm после CN, персонализация Mindbox</div>
     </div>
   </header>
 
@@ -757,12 +757,7 @@
               <option value="de">DE Akamai — MiddleName</option>
               <option value="manual">Ручная выгрузка — Attribute1</option>
             </select>
-            <small>Выберите источник данных для приветствия в блоке №4.</small>
-          </div>
-          <div class="field" id="field-utm">
-            <label for="utm_campaign">utm_campaign <span class="required">*</span></label>
-            <input id="utm_campaign" placeholder="Campaign_CV_Praluent_Q2_2026">
-            <small>Обязательное поле. В CXQ-ссылках используется, если CN не равен promo.</small>
+            <small>Заменяет приветствие Mindbox на SFMC-токены в блоке №4.</small>
           </div>
         </div>
 
@@ -809,7 +804,12 @@
           <div class="field">
             <label for="cxq_cn">CN</label>
             <select id="cxq_cn"></select>
-            <small>По умолчанию journey.</small>
+            <small>По умолчанию journey. Для promo utm_campaign в CXQ не добавляется.</small>
+          </div>
+          <div class="field field-wide" id="field-utm">
+            <label for="utm_campaign">utm_campaign <span class="required">*</span></label>
+            <input id="utm_campaign" placeholder="Campaign_CV_Praluent_Q2_2026">
+            <small>Обязательное поле. Подставляется в CXQ-ссылки, если CN не promo.</small>
           </div>
         </div>
       </div>
@@ -1050,14 +1050,49 @@
       return html.slice(0, idx) + "\n" + snippet + "\n" + html.slice(idx);
     }
 
+    function replacePersonalization(html, p) {
+      const greeting = block4Personalization(p);
+
+      const paragraphPatterns = [
+        /(<(?:p|td|th|div)[^>]*>)\s*Здравствуйте[\s\S]*?(<\/(?:p|td|th|div)>)/i,
+        /(<(?:p|td|th|div)[^>]*>)\s*Добрый\s+день[\s\S]*?(<\/(?:p|td|th|div)>)/i,
+      ];
+
+      for (const pattern of paragraphPatterns) {
+        if (pattern.test(html)) {
+          return { html: html.replace(pattern, `$1${greeting}$2`), changed: true };
+        }
+      }
+
+      const patterns = [
+        /Здравствуйте[\s\S]{0,600}?(?=<\/p>|<\/td>|<\/div>|<\/tr>|<br|<\/span>|$)/i,
+        /Добрый\s+день[\s\S]{0,600}?(?=<\/p>|<\/td>|<\/div>|<\/tr>|<br|<\/span>|$)/i,
+        /\$\{Recipient\.[^}]+\}/i,
+        /%[A-Za-z0-9_.]+%/i,
+        /\{\{[^}]+\}\}/i,
+      ];
+
+      for (const pattern of patterns) {
+        if (pattern.test(html)) {
+          return { html: html.replace(pattern, greeting), changed: true };
+        }
+      }
+
+      return { html, changed: false };
+    }
+
     function convertMindboxToSfmc(html, p) {
       const warnings = [];
       const changes = [];
       let result = html;
 
+      const persResult = replacePersonalization(result, p);
+      result = persResult.html;
+      if (persResult.changed) changes.push(`Обновлена персонализация (режим: ${p.personalization_mode})`);
+      else warnings.push("Блок №4: не найдено приветствие для замены персонализации");
+
       result = result.replace(/<!--\s*Mindbox[\s\S]*?-->/gi, "");
       result = result.replace(/<script[^>]*mindbox[^>]*>[\s\S]*?<\/script>/gi, "");
-      result = result.replace(/\$\{Recipient\.[^}]+\}/gi, "");
       result = result.replace(/\$\{Message\.[^}]+\}/gi, "");
 
       if (!result.includes("set @subscriberKey = _subscriberkey")) {
@@ -1075,15 +1110,6 @@
       result = viewResult.html;
       if (viewResult.changed) changes.push("Обновлена ссылка «сюда» на %%view_email_url%% (блок №3)");
       else warnings.push("Блок №3: не найден текст про некорректное отображение");
-
-      const greeting = block4Personalization(p);
-      const persPatterns = [/Здравствуйте[^!<\n]{0,120}!?/i, /Добрый\s+день[^!<\n]{0,120}!?/i, /\$\{Recipient\.[^}]+\}/i, /\{\{[^}]+\}\}/];
-      let replacedPers = false;
-      for (const rx of persPatterns) {
-        if (rx.test(result)) { result = result.replace(rx, greeting); replacedPers = true; break; }
-      }
-      if (replacedPers) changes.push("Обновлена персонализация (блок №4)");
-      else warnings.push("Блок №4: не найдено приветствие");
 
       const privacyUrl = extractPrivacyUrl(html);
       if (privacyUrl) {

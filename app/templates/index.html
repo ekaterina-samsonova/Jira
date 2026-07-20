@@ -93,12 +93,7 @@
                   <option value="de">DE Akamai — MiddleName</option>
                   <option value="manual">Ручная выгрузка — Attribute1</option>
                 </select>
-              </label>
-
-              <label class="field">
-                <span>utm_campaign *</span>
-                <input type="text" name="utm_campaign" placeholder="Campaign_CV_Praluent_Q2_2026">
-                <small>Добавляется в CXQ-ссылки, если CN не promo. Privacy URL берётся из HTML Mindbox.</small>
+                <small>Заменяет приветствие Mindbox на SFMC-токены.</small>
               </label>
             </div>
           </div>
@@ -137,6 +132,12 @@
               <label class="field">
                 <span>CN</span>
                 <select name="cxq_cn" id="cxq-cn"></select>
+              </label>
+
+              <label class="field" id="field-utm">
+                <span>utm_campaign *</span>
+                <input type="text" name="utm_campaign" placeholder="Campaign_CV_Praluent_Q2_2026">
+                <small>Подставляется в CXQ-ссылки, если CN не promo.</small>
               </label>
             </div>
           </div>

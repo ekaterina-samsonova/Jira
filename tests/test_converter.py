@@ -29,9 +29,13 @@ def test_convert_inserts_mandatory_blocks():
     assert "docsfera.ru/lectures/test-lecture" in result.html
     assert "utm_campaign=Campaign_Test_Q2_2026" in result.html
     assert "%%=v(@title)=%%" in result.html
+    assert "%%=v(FirstName)=%%" in result.html
+    assert "%%=v(MiddleName)=%%" in result.html
     assert "docsfera.ru/voting/cxq/" in result.html
     assert 'alias="unsubscribe"' in result.html
     assert "${Recipient.FirstName}" not in result.html
+    assert "${Recipient.MiddleName}" not in result.html
+    assert "${Recipient.Title}" not in result.html
 
 
 def test_cxq_utm_campaign_omitted_for_promo():

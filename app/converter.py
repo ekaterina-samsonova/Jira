@@ -111,12 +111,29 @@ def _extract_privacy_url(html: str) -> str:
 
 def _replace_personalization(html: str, params: ConversionParams) -> tuple[str, bool]:
     greeting = block4_personalization(params)
+
+    paragraph_patterns = [
+        r"(<(?:p|td|th|div)[^>]*>)\s*Здравствуйте[\s\S]*?(</(?:p|td|th|div)>)",
+        r"(<(?:p|td|th|div)[^>]*>)\s*Добрый\s+день[\s\S]*?(</(?:p|td|th|div)>)",
+    ]
+    for pattern in paragraph_patterns:
+        updated, count = re.subn(
+            pattern,
+            rf"\1{greeting}\2",
+            html,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+        if count:
+            return updated, True
+
     patterns = [
-        r"Здравствуйте[^!<\n]{0,120}!?",
-        r"Добрый\s+день[^!<\n]{0,120}!?",
+        r"Здравствуйте[\s\S]{0,600}?(?=</p>|</td>|</div>|</tr>|<br|</span>|$)",
+        r"Добрый\s+день[\s\S]{0,600}?(?=</p>|</td>|</div>|</tr>|<br|</span>|$)",
         r"\$\{Recipient\.[^}]+\}",
-        r"%%=v\(@FirstName\)=%%",
+        r"%(?:Recipient\.)?[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)?%",
         r"\{\{[^}]+\}\}",
+        r"@(FirstName|MiddleName|LastName|Title|Имя|Отчество|Фамилия|Обращение)\b",
     ]
     for pattern in patterns:
         updated, count = re.subn(pattern, greeting, html, count=1, flags=re.IGNORECASE)
@@ -226,7 +243,6 @@ def _strip_mindbox_artifacts(html: str) -> tuple[str, list[str]]:
     patterns = [
         (r"<!--\s*Mindbox[\s\S]*?-->", "Removed Mindbox HTML comment"),
         (r"<script[^>]*mindbox[^>]*>[\s\S]*?</script>", "Removed Mindbox script"),
-        (r"\$\{Recipient\.[^}]+\}", "Removed Mindbox Recipient token"),
         (r"\$\{Message\.[^}]+\}", "Removed Mindbox Message token"),
     ]
     updated = html
@@ -243,6 +259,12 @@ def convert_mindbox_to_sfmc(html: str, params: ConversionParams) -> ConversionRe
     warnings: list[str] = []
     changes: list[str] = []
     result = html
+
+    result, ok = _replace_personalization(result, params)
+    if ok:
+        changes.append(f"Обновлена персонализация (режим: {params.personalization_mode})")
+    else:
+        warnings.append("Блок №4: не найдено приветствие для замены персонализации")
 
     result, strip_warnings = _strip_mindbox_artifacts(result)
     warnings.extend(strip_warnings)
@@ -268,12 +290,6 @@ def convert_mindbox_to_sfmc(html: str, params: ConversionParams) -> ConversionRe
         changes.append("Обновлена ссылка «сюда» (блок №3)")
     else:
         warnings.append("Блок №3: не найден текст про некорректное отображение письма")
-
-    result, ok = _replace_personalization(result, params)
-    if ok:
-        changes.append(f"Обновлена персонализация (режим: {params.personalization_mode})")
-    else:
-        warnings.append("Блок №4: не найдено приветствие для замены персонализации")
 
     result, ok = _replace_or_insert_privacy(result, params.privacy_url)
     if ok:
