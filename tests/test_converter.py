@@ -83,6 +83,45 @@ def test_digest_button_keeps_markup_with_deeplink():
     assert "${Recipient.FirstName}" not in result.html
 
 
+def test_multiple_cta_links_keep_visuals():
+    html = """<!DOCTYPE html><html><head></head><body>
+    <a href="https://docsfera.ru/lectures/alpha/" style="color:red;font-size:20px">CTA Alpha</a>
+    <table><tr><td bgcolor="#111"><a href="https://docsfera.ru/lectures/beta/" class="btn">CTA Beta</a></td></tr></table>
+    <a href="https://docsfera.ru/lectures/alpha/" style="color:blue">CTA Alpha copy</a>
+    <p>Насколько информация в письме соответствовала вашим потребностям?</p>
+    <a class="score-link" href="https://docsfera.ru/voting/cxq/?R=1">1</a>
+    <a href="https://docsfera.ru/personal/unsubscribe/">отписаться</a>
+    </body></html>"""
+    params = ConversionParams(
+        utm_campaign="Campaign_Test_Q2_2026",
+        cxq_brand="PRALUENT",
+        cxq_da="DYSLIPIDEMIA",
+        cxq_ta="CARDIOLOGY",
+        cxq_cn="journey",
+    )
+    result = convert_mindbox_to_sfmc(html, params)
+
+    assert result.html.count("RedirectTo(@UnsubscribeUrl)") >= 3
+    assert 'style="color:red;font-size:20px"' in result.html
+    assert 'class="btn"' in result.html
+    assert 'style="color:blue"' in result.html
+    assert "CTA Alpha" in result.html
+    assert "CTA Beta" in result.html
+    assert 'class="score-link"' in result.html
+    assert "Brand=PRALUENT" in result.html
+
+
+def test_view_online_preserves_anchor_markup():
+    html = """<!DOCTYPE html><html><head></head><body>
+    <span>Если данное письмо отображается некорректно, нажмите
+    <a href="https://mindbox.example/view" style="color:#8e136d;" target="_blank"><span>сюда</span></a>.</span>
+    </body></html>"""
+    result = convert_mindbox_to_sfmc(html, ConversionParams()).html
+    assert 'href="%%view_email_url%%"' in result
+    assert 'style="color:#8e136d;"' in result
+    assert "<span>сюда</span>" in result
+
+
 def test_validate_after_conversion_passes():
     html = FIXTURE.read_text(encoding="utf-8")
     params = ConversionParams(

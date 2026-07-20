@@ -124,15 +124,21 @@ def block5_cxq(params: ConversionParams) -> str:
     )
 
 
-def block6_unsubscribe() -> str:
+def block6_unsubscribe_script() -> str:
     return f"""%%[
             /* The Marketers has to give the complete URL in @RedirectUri*/
             set @RedirectUri='{UNSUBSCRIBE_URL}'
             set @ClientId='{CLIENT_ID}'
             set @Website='https://docsfera.ru'
             ]%%
-            %%=ContentBlockbyId("{PRIVACY_CONTENT_BLOCK_ID}")=%%
-              <a alias="unsubscribe" href="%%=RedirectTo(@UnsubscribeUrl)=%%\""""
+            %%=ContentBlockbyId("{PRIVACY_CONTENT_BLOCK_ID}")=%%"""
+
+
+def block6_unsubscribe() -> str:
+    return (
+        block6_unsubscribe_script()
+        + '\n<a alias="unsubscribe" href="%%=RedirectTo(@UnsubscribeUrl)=%%"'
+    )
 
 
 # Markers used by validator

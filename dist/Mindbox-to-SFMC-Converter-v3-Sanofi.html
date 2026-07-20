@@ -680,7 +680,7 @@
       </div>
       <h1 class="header-title">Sanofi | Mindbox → SFMC Converter v3</h1>
       <p class="header-subtitle">Одноколоночный мастер конвертации шаблонов для SFMC.</p>
-      <div class="version-banner">Версия 3.4 — deeplink без изменения кнопки, персонализация SFMC</div>
+      <div class="version-banner">Версия 3.5 — deeplink/CXQ/отписка без изменения вёрстки</div>
     </div>
   </header>
 
@@ -970,41 +970,44 @@
       return candidates[0]?.url || "";
     }
 
+    const DOCSFERA_ANCHOR_RE = /(<a\b[^>]*\bhref=)(["'])(https?:\/\/docsfera\.ru\/[^"']+)\2([^>]*>)([\s\S]*?<\/a>)/gi;
+
+    function shouldApplyContentDeeplink(url) {
+      const normalized = url.replace(/\/$/, "");
+      const lower = normalized.toLowerCase();
+      if (lower === "https://docsfera.ru" || lower === "http://docsfera.ru") return false;
+      return !/(voting\/cxq|personal\/unsubscribe|unsubscribe)/i.test(lower);
+    }
+
     function replaceViewInBrowser(html) {
-      const link = block3Link();
-      let result = html;
+      const fallback = '<a href="%%view_email_url%%" target="_blank">сюда</a>';
       let changed = false;
 
-      const anchorFixed = result.replace(/<a\b[^>]*href=(["'])[^"']*\1[^>]*>\s*сюда\s*<\/a>/gi, () => {
+      const updated = html.replace(/<a\b[^>]*>[\s\S]*?сюда[\s\S]*?<\/a>/i, (anchor) => {
+        if (/%%view_email_url%%/i.test(anchor)) return anchor;
         changed = true;
-        return link;
+        return anchor.replace(/\bhref=(["'])[^"']*\1/i, 'href="%%view_email_url%%"');
       });
-      result = anchorFixed;
+      if (changed) return { html: updated, changed: true };
 
+      let result = html;
       const patterns = [
         /(Если[^<]{0,180}отображается\s+некорректно[^<]*?)(?:нажмите\s*)?(?:<a\b[^>]*>[^<]*<\/a>|сюда|здесь)/i,
         /(Если\s+(?:данное\s+)?письмо[^<]{0,180}отображается\s+некорректно[^<]*?)(<a\b[^>]*>[^<]*<\/a>|сюда|здесь)/i,
       ];
       for (const pattern of patterns) {
         if (pattern.test(result)) {
-          result = result.replace(pattern, `$1${link}`);
-          changed = true;
-          break;
+          return { html: result.replace(pattern, `$1${fallback}`), changed: true };
         }
       }
-
-      if (!result.includes('href="%%view_email_url%%"') && /отображается\s+некорректно/i.test(result)) {
-        const updated = result.replace(
+      if (!/%%view_email_url%%/i.test(result) && /отображается\s+некорректно/i.test(result)) {
+        const next = result.replace(
           /(отображается\s+некорректно[^<]{0,120}?)(?:нажмите\s*)?(?:<a\b[^>]*>[^<]*<\/a>|сюда|здесь)/i,
-          `$1${link}`
+          `$1${fallback}`
         );
-        if (updated !== result) {
-          result = updated;
-          changed = true;
-        }
+        if (next !== result) return { html: next, changed: true };
       }
-
-      return { html: result, changed };
+      return { html, changed: false };
     }
 
     function block4Personalization(p) {
@@ -1020,37 +1023,57 @@
         [/\$\{Recipient\.Title\}/gi, "%%=v(@title)=%%"],
         [/\$\{Recipient\.FirstName\}/gi, "%%=v(FirstName)=%%"],
         [/\$\{Recipient\.MiddleName\}/gi, `%%=v(${middle})=%%`],
+        [/\$\{Recipient\.LastName\}/gi, "%%=v(LastName)=%%"],
         [/%Recipient\.Title%/gi, "%%=v(@title)=%%"],
         [/%Recipient\.FirstName%/gi, "%%=v(FirstName)=%%"],
         [/%Recipient\.MiddleName%/gi, `%%=v(${middle})=%%`],
+        [/%Recipient\.LastName%/gi, "%%=v(LastName)=%%"],
       ];
     }
 
-    function findDocsferaDeeplinkUrls(html) {
-      const links = html.match(/https?:\/\/docsfera\.ru\/[^\s"'<>]+/gi) || [];
-      const urls = [];
-      const seen = new Set();
-      for (const url of links) {
-        const normalized = url.replace(/\/$/, "");
-        const lower = normalized.toLowerCase();
-        if (lower === "https://docsfera.ru" || lower === "http://docsfera.ru") continue;
-        if (/(voting\/cxq|personal\/unsubscribe|unsubscribe)/i.test(lower)) continue;
-        if (!seen.has(normalized)) {
-          seen.add(normalized);
-          urls.push(normalized);
-        }
-      }
-      return urls;
+    function wrapAnchorWithDeeplink(match, url) {
+      if (/RedirectTo\(@UnsubscribeUrl\)/i.test(match[0])) return match[0];
+      const tag = `${match[1]}${match[2]}%%=RedirectTo(@UnsubscribeUrl)=%%${match[2]}${match[4]}${match[5]}`;
+      return `${block4Privacy(url.replace(/\/$/, ""))}\n${tag}`;
     }
 
-    function applyDeeplinkToAnchor(html, url) {
-      const escaped = url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\/$/, "");
-      const pattern = new RegExp(`(<a\\b[^>]*\\bhref=)(["'])${escaped}/?\\2([^>]*>)([\\s\\S]*?<\\/a>)`, "i");
-      return html.replace(pattern, (match, open, quote, rest, inner) => {
-        if (/RedirectTo\(@UnsubscribeUrl\)/i.test(match)) return match;
-        const tag = `${open}${quote}%%=RedirectTo(@UnsubscribeUrl)=%%${quote}${rest}${inner}`;
-        return `${block4Privacy(url)}\n${tag}`;
-      });
+    function applyAllDocsferaDeeplinks(html) {
+      let result = html;
+      let count = 0;
+      if (result.includes("Start--Privacy Link goes here")) {
+        const urls = findDocsferaDeeplinkUrls(result);
+        if (urls.length) {
+          const updated = result.replace(/<!-----Start--Privacy Link goes here[\s\S]*?<!-----END---Privacy Link goes here ---->/i, block4Privacy(urls[0]));
+          if (updated !== result) {
+            result = updated;
+            count += 1;
+          }
+        }
+      }
+      const re = new RegExp(DOCSFERA_ANCHOR_RE.source, "gi");
+      const matches = [...result.matchAll(re)];
+      for (let i = matches.length - 1; i >= 0; i -= 1) {
+        const match = matches[i];
+        const url = match[3].replace(/\/$/, "");
+        if (!shouldApplyContentDeeplink(url) || /RedirectTo\(@UnsubscribeUrl\)/i.test(match[0])) continue;
+        const replacement = wrapAnchorWithDeeplink(match, url);
+        result = result.slice(0, match.index) + replacement + result.slice(match.index + match[0].length);
+        count += 1;
+      }
+      return { html: result, count };
+    }
+
+    function findDocsferaDeeplinkUrls(html) {
+      const urls = [];
+      const seen = new Set();
+      const re = new RegExp(DOCSFERA_ANCHOR_RE.source, "gi");
+      for (const match of html.matchAll(re)) {
+        const url = match[3].replace(/\/$/, "");
+        if (!shouldApplyContentDeeplink(url) || seen.has(url)) continue;
+        seen.add(url);
+        urls.push(url);
+      }
+      return urls;
     }
 
     function block4Privacy(url) {
@@ -1073,8 +1096,49 @@
       }).join("\n");
     }
 
-    function block6Unsubscribe() {
-      return `%%[\nset @RedirectUri='${UNSUBSCRIBE_URL}'\nset @ClientId='${CLIENT_ID}'\nset @Website='https://docsfera.ru'\n]%%\n%%=ContentBlockbyId("${PRIVACY_CONTENT_BLOCK_ID}")=%%\n<a alias="unsubscribe" href="%%=RedirectTo(@UnsubscribeUrl)=%%"`;
+    function block6UnsubscribeScript() {
+      return `%%[\nset @RedirectUri='${UNSUBSCRIBE_URL}'\nset @ClientId='${CLIENT_ID}'\nset @Website='https://docsfera.ru'\n]%%\n%%=ContentBlockbyId("${PRIVACY_CONTENT_BLOCK_ID}")=%%`;
+    }
+
+    function ensureUnsubscribeAlias(anchor) {
+      if (/alias="unsubscribe"/i.test(anchor)) return anchor;
+      if (/\balias\s*=/i.test(anchor)) {
+        return anchor.replace(/\balias=(["'])[^"']*\1/i, 'alias="unsubscribe"');
+      }
+      return anchor.replace(/^<a\b/i, '<a alias="unsubscribe"');
+    }
+
+    function wrapUnsubscribeAnchor(anchor) {
+      if (/RedirectTo\(@UnsubscribeUrl\)/i.test(anchor)) return ensureUnsubscribeAlias(anchor);
+      const wrapped = ensureUnsubscribeAlias(anchor.replace(/\bhref=(["'])[^"']*\1/i, 'href="%%=RedirectTo(@UnsubscribeUrl)=%%"'));
+      return `${block6UnsubscribeScript()}\n${wrapped}`;
+    }
+
+    function replaceUnsubscribe(html) {
+      const re = /(<a\b[^>]*>)([\s\S]*?<\/a>)/gi;
+      let result = html;
+      let count = 0;
+      const matches = [...result.matchAll(re)];
+      for (let i = matches.length - 1; i >= 0; i -= 1) {
+        const match = matches[i];
+        const anchor = match[0];
+        const hrefMatch = anchor.match(/\bhref=(["'])([^"']*)\1/i);
+        const href = hrefMatch ? hrefMatch[2].toLowerCase() : "";
+        const inner = match[2].toLowerCase();
+        const isUnsub = /unsubscribe|otpis/.test(href) || /отпис/.test(inner);
+        if (!isUnsub) continue;
+        const replacement = wrapUnsubscribeAnchor(anchor);
+        if (replacement !== anchor) {
+          result = result.slice(0, match.index) + replacement + result.slice(match.index + anchor.length);
+          count += 1;
+        }
+      }
+      if (count) return { html: result, changed: true };
+      const fallback = `${block6UnsubscribeScript()}\n<a alias="unsubscribe" href="%%=RedirectTo(@UnsubscribeUrl)=%%">сюда.</a>`;
+      if (/<\/body>/i.test(result)) {
+        return { html: result.replace(/<\/body>/i, `${fallback}\n</body>`), changed: true };
+      }
+      return { html: result + `\n${fallback}`, changed: true };
     }
 
     function insertBeforeDoctype(html, snippet) {
@@ -1138,52 +1202,38 @@
 
       const viewResult = replaceViewInBrowser(result);
       result = viewResult.html;
-      if (viewResult.changed) changes.push("Обновлена ссылка «сюда» на %%view_email_url%% (блок №3)");
+      if (viewResult.changed) changes.push("Обновлена ссылка «сюда» (блок №3) — href без изменения вёрстки");
       else warnings.push("Блок №3: не найден текст про некорректное отображение");
 
-      const privacyUrl = extractPrivacyUrl(html);
-      const deeplinkUrls = findDocsferaDeeplinkUrls(html);
-      if (privacyUrl && !deeplinkUrls.includes(privacyUrl.replace(/\/$/, ""))) {
-        deeplinkUrls.unshift(privacyUrl.replace(/\/$/, ""));
-      }
-      if (deeplinkUrls.length) {
-        if (result.includes("Start--Privacy Link goes here")) {
-          result = result.replace(/<!-----Start--Privacy Link goes here[\s\S]*?<!-----END---Privacy Link goes here ---->/i, block4Privacy(deeplinkUrls[0]));
-        }
-        for (const url of deeplinkUrls) {
-          const updated = applyDeeplinkToAnchor(result, url);
-          if (updated !== result) result = updated;
-        }
-        changes.push(`Добавлен deeplink ContentBlock 1649 (${deeplinkUrls[0]})`);
+      const deeplinkResult = applyAllDocsferaDeeplinks(result);
+      result = deeplinkResult.html;
+      if (deeplinkResult.count) {
+        changes.push(`Добавлен deeplink ContentBlock 1649 к ${deeplinkResult.count} ссылкам docsfera.ru (разметка сохранена)`);
       } else {
-        warnings.push("Блок №4 (Privacy): ссылка docsfera.ru не найдена в исходном HTML");
+        warnings.push("Блок №4 (deeplink): ссылки docsfera.ru для обёртки не найдены");
       }
 
       if (p.cxq_brand) {
         if (p.cxq_cn.toLowerCase() !== "promo" && !p.utm_campaign) {
           warnings.push("Блок №5: utm_campaign обязателен для CXQ, когда CN не promo");
         }
-        const cxqBlock = block5Cxq(p);
-        const section = /(Насколько\s+информация\s+в\s+письме\s+соответствовала\s+вашим\s+потребностям\?)[\s\S]{0,4000}?(?=<\/td>|<\/tr>|<\/table>|<\/body>|$)/i;
-        if (section.test(result)) {
-          result = result.replace(section, `$1\n${cxqBlock}`);
-          changes.push("Обновлен CXQ-блок (блок №5)");
+        if (/docsfera\.ru\/voting\/cxq/i.test(result)) {
+          result = result.replace(/https?:\/\/docsfera\.ru\/voting\/cxq\/\?[^"'\s<>]+/gi, (url) => {
+            const ratingMatch = url.match(/[?&]R=(\d)/i);
+            const rating = ratingMatch ? Math.max(1, Math.min(7, Number(ratingMatch[1]))) : 1;
+            return buildCxqUrl(p, rating);
+          });
+          changes.push("Обновлены href в CXQ-ссылках (блок №5) — вёрстка сохранена");
         } else {
-          warnings.push("Блок №5: CXQ-секция не найдена");
+          warnings.push("Блок №5: CXQ-ссылки не найдены");
         }
       } else {
         warnings.push("Блок №5: укажите Brand");
       }
 
-      const unsub = block6Unsubscribe();
-      if (/<a[^>]*отпис[^>]*>[\s\S]*?<\/a>/i.test(result)) {
-        result = result.replace(/<a[^>]*отпис[^>]*>[\s\S]*?<\/a>/i, unsub);
-      } else if (/<\/body>/i.test(result)) {
-        result = result.replace(/<\/body>/i, unsub + "\n</body>");
-      } else {
-        result += "\n" + unsub;
-      }
-      changes.push("Обновлен блок отписки (блок №6)");
+      const unsubResult = replaceUnsubscribe(result);
+      result = unsubResult.html;
+      if (unsubResult.changed) changes.push("Обновлен блок отписки (блок №6) — разметка ссылки сохранена");
 
       if (p.data_extension !== "Akamai_profiles_consents_bounced") {
         warnings.push(`Нестандартный DE: ${p.data_extension} — проверьте блок №1`);

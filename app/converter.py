@@ -9,11 +9,9 @@ from app.blocks import (
     ConversionParams,
     block1,
     block2,
-    block3_link,
     block4_personalization,
     block4_privacy,
-    block5_cxq,
-    block6_unsubscribe,
+    block6_unsubscribe_script,
     build_cxq_url,
 )
 
@@ -24,6 +22,11 @@ class ConversionResult:
     warnings: list[str]
     changes: list[str]
 
+
+_DOCSFERA_ANCHOR_RE = re.compile(
+    r'(<a\b[^>]*\bhref=)(["\'])(https?://docsfera\.ru/[^"\']+)\2([^>]*>)([\s\S]*?</a>)',
+    re.IGNORECASE,
+)
 
 def _insert_before_doctype(html: str, snippet: str) -> tuple[str, bool]:
     match = re.search(r"(<!DOCTYPE|<html)", html, re.IGNORECASE)
@@ -42,21 +45,33 @@ def _insert_after_head(html: str, snippet: str) -> tuple[str, bool]:
 
 
 def _replace_view_in_browser(html: str) -> tuple[str, bool]:
-    link = block3_link()
     changed = False
-    result = html
 
-    # Always normalize anchors with link text «сюда» to the SFMC view-online URL.
+    def fix_view_link(match: re.Match[str]) -> str:
+        nonlocal changed
+        anchor = match.group(0)
+        if "%%view_email_url%%" in anchor:
+            return anchor
+        changed = True
+        return re.sub(
+            r'\bhref=(["\'])[^"\']*\1',
+            'href="%%view_email_url%%"',
+            anchor,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+
     updated, count = re.subn(
-        r'<a\b[^>]*href=(["\'])[^"\']*\1[^>]*>\s*сюда\s*</a>',
-        link,
-        result,
+        r"<a\b[^>]*>[\s\S]*?сюда[\s\S]*?</a>",
+        fix_view_link,
+        html,
+        count=1,
         flags=re.IGNORECASE,
     )
     if count:
-        result = updated
-        changed = True
+        return updated, True
 
+    link = '<a href="%%view_email_url%%" target="_blank">сюда</a>'
     patterns = [
         (
             r"(Если[^<]{0,180}отображается\s+некорректно[^<]*?)(?:нажмите\s*)?(?:<a\b[^>]*>[^<]*</a>|сюда|здесь)",
@@ -67,46 +82,31 @@ def _replace_view_in_browser(html: str) -> tuple[str, bool]:
             rf"\1{link}",
         ),
     ]
+    result = html
     for pattern, repl in patterns:
-        updated, count = re.subn(pattern, repl, result, count=1, flags=re.IGNORECASE)
-        if count:
-            result = updated
-            changed = True
-            break
+        updated_text, hit_count = re.subn(pattern, repl, result, count=1, flags=re.IGNORECASE)
+        if hit_count:
+            return updated_text, True
 
-    if 'href="%%view_email_url%%"' not in result and re.search(
-        r"отображается\s+некорректно", result, re.IGNORECASE
+    if 'href="%%view_email_url%%"' not in html and re.search(
+        r"отображается\s+некорректно", html, re.IGNORECASE
     ):
-        updated, count = re.subn(
+        updated_text, hit_count = re.subn(
             r"(отображается\s+некорректно[^<]{0,120}?)(?:нажмите\s*)?(?:<a\b[^>]*>[^<]*</a>|сюда|здесь)",
             rf"\1{link}",
-            result,
+            html,
             count=1,
             flags=re.IGNORECASE,
         )
-        if count:
-            result = updated
-            changed = True
+        if hit_count:
+            return updated_text, True
 
-    return result, changed
+    return html, changed
 
 
 def _extract_privacy_url(html: str) -> str:
-    links = re.findall(r"https?://docsfera\.ru/[^\s\"'<>]+", html, re.IGNORECASE)
-    candidates: list[tuple[int, str]] = []
-    for url in links:
-        lower = url.lower()
-        if any(token in lower for token in ("unsubscribe", "voting/cxq", "/personal/unsubscribe")):
-            continue
-        score = 0
-        if any(token in lower for token in ("lectures", "lecture", "policy", "politic", "privacy", "confiden")):
-            score += 2
-        candidates.append((score, url.rstrip("/")))
-
-    if not candidates:
-        return ""
-    candidates.sort(key=lambda item: (-item[0], len(item[1])))
-    return candidates[0][1]
+    links = _find_docsfera_deeplink_urls(html)
+    return links[0] if links else ""
 
 
 def _personalization_field_map(params: ConversionParams) -> list[tuple[str, str]]:
@@ -116,9 +116,11 @@ def _personalization_field_map(params: ConversionParams) -> list[tuple[str, str]
         (r"\$\{Recipient\.Title\}", "%%=v(@title)=%%"),
         (r"\$\{Recipient\.FirstName\}", "%%=v(FirstName)=%%"),
         (r"\$\{Recipient\.MiddleName\}", f"%%=v({middle_field})=%%"),
+        (r"\$\{Recipient\.LastName\}", "%%=v(LastName)=%%"),
         (r"%Recipient\.Title%", "%%=v(@title)=%%"),
         (r"%Recipient\.FirstName%", "%%=v(FirstName)=%%"),
         (r"%Recipient\.MiddleName%", f"%%=v({middle_field})=%%"),
+        (r"%Recipient\.LastName%", "%%=v(LastName)=%%"),
     ]
 
 
@@ -135,112 +137,99 @@ def _replace_personalization(html: str, params: ConversionParams) -> tuple[str, 
         return result, True
 
     greeting = block4_personalization(params)
-    fallback_patterns = [
-        r"Здравствуйте[\s\S]*?!",
-        r"Добрый\s+день[\s\S]*?!",
-    ]
-    for pattern in fallback_patterns:
+    for pattern in (r"Здравствуйте[\s\S]*?!", r"Добрый\s+день[\s\S]*?!"):
         updated, count = re.subn(pattern, greeting, result, count=1, flags=re.IGNORECASE)
         if count:
             return updated, True
     return html, False
 
 
+def _should_apply_content_deeplink(url: str) -> bool:
+    normalized = url.rstrip("/")
+    lower = normalized.lower()
+    if lower in {"https://docsfera.ru", "http://docsfera.ru"}:
+        return False
+    if any(token in lower for token in ("voting/cxq", "personal/unsubscribe", "unsubscribe")):
+        return False
+    return True
+
+
 def _find_docsfera_deeplink_urls(html: str) -> list[str]:
-    links = re.findall(r"https?://docsfera\.ru/[^\s\"'<>]+", html, re.IGNORECASE)
     urls: list[str] = []
     seen: set[str] = set()
-    for url in links:
-        normalized = url.rstrip("/")
-        lower = normalized.lower()
-        if lower in {"https://docsfera.ru", "http://docsfera.ru"}:
+    for match in _DOCSFERA_ANCHOR_RE.finditer(html):
+        url = match.group(3).rstrip("/")
+        if not _should_apply_content_deeplink(url):
             continue
-        if any(token in lower for token in ("voting/cxq", "personal/unsubscribe", "unsubscribe")):
-            continue
-        if normalized not in seen:
-            seen.add(normalized)
-            urls.append(normalized)
+        if url not in seen:
+            seen.add(url)
+            urls.append(url)
     return urls
 
 
-def _apply_deeplink_to_anchor(html: str, url: str) -> tuple[str, bool]:
-    escaped = re.escape(url.rstrip("/"))
-    pattern = rf'(<a\b[^>]*\bhref=)(["\']){escaped}/?\2([^>]*>)([\s\S]*?</a>)'
+def _wrap_anchor_with_deeplink(
+    match: re.Match[str],
+    redirect_url: str,
+    *,
+    alias: str = "",
+) -> str:
+    if "RedirectTo(@UnsubscribeUrl)" in match.group(0):
+        return match.group(0)
 
-    def replacer(match: re.Match[str]) -> str:
-        if "RedirectTo(@UnsubscribeUrl)" in match.group(0):
-            return match.group(0)
-        open_tag = (
-            f"{match.group(1)}{match.group(2)}%%=RedirectTo(@UnsubscribeUrl)=%%"
-            f"{match.group(2)}{match.group(3)}"
-        )
-        return f"{block4_privacy(url)}\n{open_tag}{match.group(4)}"
+    open_tag = match.group(4)
+    if alias and 'alias="' not in open_tag.lower():
+        open_tag = re.sub(r"^<a\b", f'<a alias="{alias}"', open_tag, count=1, flags=re.IGNORECASE)
 
-    updated, count = re.subn(pattern, replacer, html, flags=re.IGNORECASE)
-    return updated, count > 0
+    open_part = (
+        f"{match.group(1)}{match.group(2)}%%=RedirectTo(@UnsubscribeUrl)=%%"
+        f"{match.group(2)}{open_tag}"
+    )
+    return f"{block4_privacy(redirect_url.rstrip('/'))}\n{open_part}{match.group(5)}"
 
 
-def _replace_or_insert_privacy(html: str, privacy_url: str = "", source_html: str = "") -> tuple[str, bool]:
-    discovery_source = source_html or html
-    urls = _find_docsfera_deeplink_urls(discovery_source)
-    chosen = privacy_url.strip().rstrip("/")
-    if chosen and chosen not in urls:
-        urls.insert(0, chosen)
-    if not urls:
-        chosen = _extract_privacy_url(discovery_source)
-        if chosen:
-            urls = [chosen.rstrip("/")]
-
-    if not urls:
-        return html, False
-
+def _apply_all_docsfera_deeplinks(html: str) -> tuple[str, int]:
     result = html
-    changed = False
+    count = 0
 
     if "Start--Privacy Link goes here" in result:
-        block = block4_privacy(urls[0])
-        updated = re.sub(
-            r"<!-----Start--Privacy Link goes here[\s\S]*?<!-----END---Privacy Link goes here ---->",
-            block,
-            result,
-            count=1,
-            flags=re.IGNORECASE,
-        )
-        if updated != result:
-            result = updated
-            changed = True
+        urls = _find_docsfera_deeplink_urls(result)
+        if urls:
+            block = block4_privacy(urls[0])
+            updated = re.sub(
+                r"<!-----Start--Privacy Link goes here[\s\S]*?<!-----END---Privacy Link goes here ---->",
+                block,
+                result,
+                count=1,
+                flags=re.IGNORECASE,
+            )
+            if updated != result:
+                result = updated
+                count += 1
 
-    for url in urls:
-        updated, ok = _apply_deeplink_to_anchor(result, url)
-        if ok:
-            result = updated
-            changed = True
+    matches = list(_DOCSFERA_ANCHOR_RE.finditer(result))
+    for match in reversed(matches):
+        url = match.group(3).rstrip("/")
+        if not _should_apply_content_deeplink(url):
+            continue
+        if "RedirectTo(@UnsubscribeUrl)" in match.group(0):
+            continue
+        replacement = _wrap_anchor_with_deeplink(match, url)
+        result = result[: match.start()] + replacement + result[match.end() :]
+        count += 1
 
-    return result, changed
+    return result, count
 
 
 def _replace_cxq_block(html: str, params: ConversionParams) -> tuple[str, bool]:
-    cxq_block = block5_cxq(params)
-    section_pattern = (
-        r"(Насколько\s+информация\s+в\s+письме\s+соответствовала\s+вашим\s+потребностям\?)"
-        r"[\s\S]{0,4000}?(?=</td>|</tr>|</table>|</body>|$)"
+    if "docsfera.ru/voting/cxq" not in html.lower():
+        return html, False
+
+    updated = re.sub(
+        r"https?://docsfera\.ru/voting/cxq/\?[^\"'\s<>]+",
+        lambda match: build_cxq_url(params, _extract_cxq_rating(match.group(0))),
+        html,
     )
-    if re.search(section_pattern, html, re.IGNORECASE):
-        def replacer(match: re.Match[str]) -> str:
-            return match.group(1) + "\n" + cxq_block
-
-        updated = re.sub(section_pattern, replacer, html, count=1, flags=re.IGNORECASE)
-        return updated, updated != html
-
-    if "docsfera.ru/voting/cxq" in html:
-        updated = re.sub(
-            r"https?://docsfera\.ru/voting/cxq/\?[^\"'\s<>]+",
-            lambda m: build_cxq_url(params, _extract_cxq_rating(m.group(0))),
-            html,
-        )
-        return updated, updated != html
-
-    return html, False
+    return updated, updated != html
 
 
 def _extract_cxq_rating(url: str) -> int:
@@ -251,37 +240,70 @@ def _extract_cxq_rating(url: str) -> int:
     return 1
 
 
-def _replace_unsubscribe(html: str) -> tuple[str, bool]:
-    block = block6_unsubscribe()
-    if 'alias="unsubscribe"' in html and "RedirectTo(@UnsubscribeUrl)" in html:
-        updated = re.sub(
-            r"%%\[[\s\S]*?set @RedirectUri='https://docsfera\.ru/personal/unsubscribe/'[\s\S]*?"
-            r"%%=ContentBlockbyId\(\"1649\"\)=%%[\s\S]*?"
-            r'<a alias="unsubscribe" href="%%=RedirectTo\(@UnsubscribeUrl\)=%%[^>]*>',
-            block,
-            html,
+def _ensure_unsubscribe_alias(anchor: str) -> str:
+    if 'alias="unsubscribe"' in anchor.lower():
+        return anchor
+    if re.search(r"\balias\s*=", anchor, re.IGNORECASE):
+        return re.sub(
+            r'\balias=(["\'])[^"\']*\1',
+            'alias="unsubscribe"',
+            anchor,
             count=1,
             flags=re.IGNORECASE,
         )
-        if updated != html:
-            return updated, True
-        return html, True
+    return re.sub(r"^<a\b", '<a alias="unsubscribe"', anchor, count=1, flags=re.IGNORECASE)
 
-    patterns = [
-        r"<a[^>]*отпис[^>]*>[\s\S]*?</a>",
-        r"https?://[^\"'\s<>]*unsubscribe[^\"'\s<>]*",
-        r"\$\{[^}]*unsubscribe[^}]*\}",
-    ]
-    for pattern in patterns:
-        if re.search(pattern, html, re.IGNORECASE):
-            updated = re.sub(pattern, block, html, count=1, flags=re.IGNORECASE)
-            if updated != html:
-                return updated, True
 
-    if "</body>" in html.lower():
-        updated = re.sub(r"</body>", block + "\n</body>", html, count=1, flags=re.IGNORECASE)
+def _replace_href_with_redirect(anchor: str) -> str:
+    return re.sub(
+        r'\bhref=(["\'])[^"\']*\1',
+        'href="%%=RedirectTo(@UnsubscribeUrl)=%%"',
+        anchor,
+        count=1,
+        flags=re.IGNORECASE,
+    )
+
+
+def _wrap_unsubscribe_anchor(anchor: str) -> str:
+    if "RedirectTo(@UnsubscribeUrl)" in anchor:
+        return _ensure_unsubscribe_alias(anchor)
+    wrapped = _ensure_unsubscribe_alias(_replace_href_with_redirect(anchor))
+    return f"{block6_unsubscribe_script()}\n{wrapped}"
+
+
+def _replace_unsubscribe(html: str) -> tuple[str, bool]:
+    anchor_re = re.compile(r"(<a\b[^>]*>)([\s\S]*?</a>)", re.IGNORECASE)
+    result = html
+    count = 0
+
+    for match in reversed(list(anchor_re.finditer(result))):
+        anchor = match.group(0)
+        href_match = re.search(r'\bhref=(["\'])([^"\']*)\1', anchor, re.IGNORECASE)
+        href = href_match.group(2).lower() if href_match else ""
+        inner = match.group(2).lower()
+        is_unsub = any(token in href for token in ("unsubscribe", "otpis")) or "отпис" in inner
+        if not is_unsub:
+            continue
+        replacement = _wrap_unsubscribe_anchor(anchor)
+        if replacement != anchor:
+            result = result[: match.start()] + replacement + result[match.end() :]
+            count += 1
+
+    if count:
+        return result, True
+
+    if "</body>" in result.lower():
+        fallback = (
+            f"{block6_unsubscribe_script()}\n"
+            '<a alias="unsubscribe" href="%%=RedirectTo(@UnsubscribeUrl)=%%">сюда.</a>'
+        )
+        updated = re.sub(r"</body>", fallback + "\n</body>", result, count=1, flags=re.IGNORECASE)
         return updated, True
-    return html + "\n" + block, True
+    return (
+        result
+        + f'\n{block6_unsubscribe_script()}\n<a alias="unsubscribe" href="%%=RedirectTo(@UnsubscribeUrl)=%%">сюда.</a>',
+        True,
+    )
 
 
 def _strip_mindbox_artifacts(html: str) -> tuple[str, list[str]]:
@@ -333,31 +355,33 @@ def convert_mindbox_to_sfmc(html: str, params: ConversionParams) -> ConversionRe
 
     result, ok = _replace_view_in_browser(result)
     if ok:
-        changes.append("Обновлена ссылка «сюда» (блок №3)")
+        changes.append("Обновлена ссылка «сюда» (блок №3) — href без изменения вёрстки")
     else:
         warnings.append("Блок №3: не найден текст про некорректное отображение письма")
 
-    result, ok = _replace_or_insert_privacy(result, params.privacy_url, source_html=html)
-    if ok:
-        privacy_source = params.privacy_url.strip() or _extract_privacy_url(html)
-        changes.append(f"Добавлен deeplink ContentBlock 1649 (docsfera.ru: {privacy_source})")
+    result, deeplink_count = _apply_all_docsfera_deeplinks(result)
+    if deeplink_count:
+        changes.append(
+            f"Добавлен deeplink ContentBlock 1649 к {deeplink_count} ссылкам docsfera.ru "
+            "(разметка и стили сохранены)"
+        )
     else:
-        warnings.append("Блок №4 (Privacy): ссылка docsfera.ru не найдена в исходном HTML")
+        warnings.append("Блок №4 (deeplink): ссылки docsfera.ru для обёртки не найдены")
 
     if params.cxq_brand:
         if params.cxq_cn.lower() != "promo" and not params.utm_campaign:
             warnings.append("Блок №5: utm_campaign обязателен для CXQ, когда CN не promo")
         result, ok = _replace_cxq_block(result, params)
         if ok:
-            changes.append("Обновлен CXQ-блок (блок №5) с UTM-метками")
+            changes.append("Обновлены href в CXQ-ссылках (блок №5) — вёрстка сохранена")
         else:
-            warnings.append("Блок №5: CXQ-секция не найдена — проверьте вручную")
+            warnings.append("Блок №5: CXQ-ссылки не найдены — проверьте вручную")
     else:
         warnings.append("Блок №5: укажите Brand для генерации CXQ-ссылок")
 
     result, ok = _replace_unsubscribe(result)
     if ok:
-        changes.append("Обновлен блок отписки (блок №6)")
+        changes.append("Обновлен блок отписки (блок №6) — разметка ссылки сохранена")
 
     if params.data_extension != "Akamai_profiles_consents_bounced":
         warnings.append(
