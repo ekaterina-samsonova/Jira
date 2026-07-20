@@ -680,7 +680,7 @@
       </div>
       <h1 class="header-title">Sanofi | Mindbox → SFMC Converter v3</h1>
       <p class="header-subtitle">Одноколоночный мастер конвертации шаблонов для SFMC.</p>
-      <div class="version-banner">Версия 3.3 — utm_campaign обязателен только если CN не promo</div>
+      <div class="version-banner">Версия 3.4 — deeplink без изменения кнопки, персонализация SFMC</div>
     </div>
   </header>
 
@@ -1010,7 +1010,47 @@
     function block4Personalization(p) {
       return p.personalization_mode === "manual"
         ? "Здравствуйте, %%=v(@title)=%% %%=v(FirstName)=%% %%=v(Attribute1)=%%!"
-        : "Здравствуйте,%%=v(@title)=%% %%=v(FirstName)=%% %%=v(MiddleName)=%%";
+        : "Здравствуйте, %%=v(@title)=%% %%=v(FirstName)=%% %%=v(MiddleName)=%%!";
+    }
+
+    function personalizationFieldMap(p) {
+      const middle = p.personalization_mode === "manual" ? "Attribute1" : "MiddleName";
+      return [
+        [/<span>\s*\$\{Recipient\.Title\}\s*<\/span>/gi, "%%=v(@title)=%%"],
+        [/\$\{Recipient\.Title\}/gi, "%%=v(@title)=%%"],
+        [/\$\{Recipient\.FirstName\}/gi, "%%=v(FirstName)=%%"],
+        [/\$\{Recipient\.MiddleName\}/gi, `%%=v(${middle})=%%`],
+        [/%Recipient\.Title%/gi, "%%=v(@title)=%%"],
+        [/%Recipient\.FirstName%/gi, "%%=v(FirstName)=%%"],
+        [/%Recipient\.MiddleName%/gi, `%%=v(${middle})=%%`],
+      ];
+    }
+
+    function findDocsferaDeeplinkUrls(html) {
+      const links = html.match(/https?:\/\/docsfera\.ru\/[^\s"'<>]+/gi) || [];
+      const urls = [];
+      const seen = new Set();
+      for (const url of links) {
+        const normalized = url.replace(/\/$/, "");
+        const lower = normalized.toLowerCase();
+        if (lower === "https://docsfera.ru" || lower === "http://docsfera.ru") continue;
+        if (/(voting\/cxq|personal\/unsubscribe|unsubscribe)/i.test(lower)) continue;
+        if (!seen.has(normalized)) {
+          seen.add(normalized);
+          urls.push(normalized);
+        }
+      }
+      return urls;
+    }
+
+    function applyDeeplinkToAnchor(html, url) {
+      const escaped = url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\/$/, "");
+      const pattern = new RegExp(`(<a\\b[^>]*\\bhref=)(["'])${escaped}/?\\2([^>]*>)([\\s\\S]*?<\\/a>)`, "i");
+      return html.replace(pattern, (match, open, quote, rest, inner) => {
+        if (/RedirectTo\(@UnsubscribeUrl\)/i.test(match)) return match;
+        const tag = `${open}${quote}%%=RedirectTo(@UnsubscribeUrl)=%%${quote}${rest}${inner}`;
+        return `${block4Privacy(url)}\n${tag}`;
+      });
     }
 
     function block4Privacy(url) {
@@ -1051,33 +1091,23 @@
     }
 
     function replacePersonalization(html, p) {
+      let result = html;
+      let tokenHits = 0;
+      for (const [pattern, replacement] of personalizationFieldMap(p)) {
+        const updated = result.replace(pattern, replacement);
+        if (updated !== result) {
+          tokenHits += 1;
+          result = updated;
+        }
+      }
+      if (tokenHits) return { html: result, changed: true };
+
       const greeting = block4Personalization(p);
-
-      const paragraphPatterns = [
-        /(<(?:p|td|th|div)[^>]*>)\s*Здравствуйте[\s\S]*?(<\/(?:p|td|th|div)>)/i,
-        /(<(?:p|td|th|div)[^>]*>)\s*Добрый\s+день[\s\S]*?(<\/(?:p|td|th|div)>)/i,
-      ];
-
-      for (const pattern of paragraphPatterns) {
-        if (pattern.test(html)) {
-          return { html: html.replace(pattern, `$1${greeting}$2`), changed: true };
+      for (const pattern of [/Здравствуйте[\s\S]*?!/i, /Добрый\s+день[\s\S]*?!/i]) {
+        if (pattern.test(result)) {
+          return { html: result.replace(pattern, greeting), changed: true };
         }
       }
-
-      const patterns = [
-        /Здравствуйте[\s\S]{0,600}?(?=<\/p>|<\/td>|<\/div>|<\/tr>|<br|<\/span>|$)/i,
-        /Добрый\s+день[\s\S]{0,600}?(?=<\/p>|<\/td>|<\/div>|<\/tr>|<br|<\/span>|$)/i,
-        /\$\{Recipient\.[^}]+\}/i,
-        /%[A-Za-z0-9_.]+%/i,
-        /\{\{[^}]+\}\}/i,
-      ];
-
-      for (const pattern of patterns) {
-        if (pattern.test(html)) {
-          return { html: html.replace(pattern, greeting), changed: true };
-        }
-      }
-
       return { html, changed: false };
     }
 
@@ -1112,21 +1142,19 @@
       else warnings.push("Блок №3: не найден текст про некорректное отображение");
 
       const privacyUrl = extractPrivacyUrl(html);
-      if (privacyUrl) {
+      const deeplinkUrls = findDocsferaDeeplinkUrls(html);
+      if (privacyUrl && !deeplinkUrls.includes(privacyUrl.replace(/\/$/, ""))) {
+        deeplinkUrls.unshift(privacyUrl.replace(/\/$/, ""));
+      }
+      if (deeplinkUrls.length) {
         if (result.includes("Start--Privacy Link goes here")) {
-          result = result.replace(/<!-----Start--Privacy Link goes here[\s\S]*?<!-----END---Privacy Link goes here ---->/i, block4Privacy(privacyUrl));
-        } else {
-          const escaped = privacyUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const anchorPattern = new RegExp(`<a\\b[^>]*href=["']${escaped}/?["'][^>]*>[\\s\\S]*?<\\/a>`, "i");
-          if (anchorPattern.test(result)) {
-            result = result.replace(anchorPattern, block4Privacy(privacyUrl));
-          } else if (/<\/body>/i.test(result)) {
-            result = result.replace(/<\/body>/i, block4Privacy(privacyUrl) + "\n</body>");
-          } else {
-            result += "\n" + block4Privacy(privacyUrl);
-          }
+          result = result.replace(/<!-----Start--Privacy Link goes here[\s\S]*?<!-----END---Privacy Link goes here ---->/i, block4Privacy(deeplinkUrls[0]));
         }
-        changes.push(`Обновлен Privacy Link из HTML (${privacyUrl})`);
+        for (const url of deeplinkUrls) {
+          const updated = applyDeeplinkToAnchor(result, url);
+          if (updated !== result) result = updated;
+        }
+        changes.push(`Добавлен deeplink ContentBlock 1649 (${deeplinkUrls[0]})`);
       } else {
         warnings.push("Блок №4 (Privacy): ссылка docsfera.ru не найдена в исходном HTML");
       }

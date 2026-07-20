@@ -78,7 +78,7 @@ def block3_link() -> str:
 def block4_personalization(params: ConversionParams) -> str:
     if params.personalization_mode == "manual":
         return "Здравствуйте, %%=v(@title)=%% %%=v(FirstName)=%% %%=v(Attribute1)=%%!"
-    return "Здравствуйте,%%=v(@title)=%% %%=v(FirstName)=%% %%=v(MiddleName)=%%"
+    return "Здравствуйте, %%=v(@title)=%% %%=v(FirstName)=%% %%=v(MiddleName)=%%!"
 
 
 def block4_privacy(privacy_url: str) -> str:

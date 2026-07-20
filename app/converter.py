@@ -109,68 +109,114 @@ def _extract_privacy_url(html: str) -> str:
     return candidates[0][1]
 
 
+def _personalization_field_map(params: ConversionParams) -> list[tuple[str, str]]:
+    middle_field = "Attribute1" if params.personalization_mode == "manual" else "MiddleName"
+    return [
+        (r"<span>\s*\$\{Recipient\.Title\}\s*</span>", "%%=v(@title)=%%"),
+        (r"\$\{Recipient\.Title\}", "%%=v(@title)=%%"),
+        (r"\$\{Recipient\.FirstName\}", "%%=v(FirstName)=%%"),
+        (r"\$\{Recipient\.MiddleName\}", f"%%=v({middle_field})=%%"),
+        (r"%Recipient\.Title%", "%%=v(@title)=%%"),
+        (r"%Recipient\.FirstName%", "%%=v(FirstName)=%%"),
+        (r"%Recipient\.MiddleName%", f"%%=v({middle_field})=%%"),
+    ]
+
+
 def _replace_personalization(html: str, params: ConversionParams) -> tuple[str, bool]:
-    greeting = block4_personalization(params)
-
-    paragraph_patterns = [
-        r"(<(?:p|td|th|div)[^>]*>)\s*Здравствуйте[\s\S]*?(</(?:p|td|th|div)>)",
-        r"(<(?:p|td|th|div)[^>]*>)\s*Добрый\s+день[\s\S]*?(</(?:p|td|th|div)>)",
-    ]
-    for pattern in paragraph_patterns:
-        updated, count = re.subn(
-            pattern,
-            rf"\1{greeting}\2",
-            html,
-            count=1,
-            flags=re.IGNORECASE,
-        )
+    result = html
+    token_hits = 0
+    for pattern, replacement in _personalization_field_map(params):
+        updated, count = re.subn(pattern, replacement, result, flags=re.IGNORECASE)
         if count:
-            return updated, True
+            token_hits += count
+            result = updated
 
-    patterns = [
-        r"Здравствуйте[\s\S]{0,600}?(?=</p>|</td>|</div>|</tr>|<br|</span>|$)",
-        r"Добрый\s+день[\s\S]{0,600}?(?=</p>|</td>|</div>|</tr>|<br|</span>|$)",
-        r"\$\{Recipient\.[^}]+\}",
-        r"%(?:Recipient\.)?[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)?%",
-        r"\{\{[^}]+\}\}",
-        r"@(FirstName|MiddleName|LastName|Title|Имя|Отчество|Фамилия|Обращение)\b",
+    if token_hits:
+        return result, True
+
+    greeting = block4_personalization(params)
+    fallback_patterns = [
+        r"Здравствуйте[\s\S]*?!",
+        r"Добрый\s+день[\s\S]*?!",
     ]
-    for pattern in patterns:
-        updated, count = re.subn(pattern, greeting, html, count=1, flags=re.IGNORECASE)
+    for pattern in fallback_patterns:
+        updated, count = re.subn(pattern, greeting, result, count=1, flags=re.IGNORECASE)
         if count:
             return updated, True
     return html, False
 
 
-def _replace_or_insert_privacy(html: str, privacy_url: str = "") -> tuple[str, bool]:
-    chosen = privacy_url.strip() or _extract_privacy_url(html)
-    if not chosen:
+def _find_docsfera_deeplink_urls(html: str) -> list[str]:
+    links = re.findall(r"https?://docsfera\.ru/[^\s\"'<>]+", html, re.IGNORECASE)
+    urls: list[str] = []
+    seen: set[str] = set()
+    for url in links:
+        normalized = url.rstrip("/")
+        lower = normalized.lower()
+        if lower in {"https://docsfera.ru", "http://docsfera.ru"}:
+            continue
+        if any(token in lower for token in ("voting/cxq", "personal/unsubscribe", "unsubscribe")):
+            continue
+        if normalized not in seen:
+            seen.add(normalized)
+            urls.append(normalized)
+    return urls
+
+
+def _apply_deeplink_to_anchor(html: str, url: str) -> tuple[str, bool]:
+    escaped = re.escape(url.rstrip("/"))
+    pattern = rf'(<a\b[^>]*\bhref=)(["\']){escaped}/?\2([^>]*>)([\s\S]*?</a>)'
+
+    def replacer(match: re.Match[str]) -> str:
+        if "RedirectTo(@UnsubscribeUrl)" in match.group(0):
+            return match.group(0)
+        open_tag = (
+            f"{match.group(1)}{match.group(2)}%%=RedirectTo(@UnsubscribeUrl)=%%"
+            f"{match.group(2)}{match.group(3)}"
+        )
+        return f"{block4_privacy(url)}\n{open_tag}{match.group(4)}"
+
+    updated, count = re.subn(pattern, replacer, html, flags=re.IGNORECASE)
+    return updated, count > 0
+
+
+def _replace_or_insert_privacy(html: str, privacy_url: str = "", source_html: str = "") -> tuple[str, bool]:
+    discovery_source = source_html or html
+    urls = _find_docsfera_deeplink_urls(discovery_source)
+    chosen = privacy_url.strip().rstrip("/")
+    if chosen and chosen not in urls:
+        urls.insert(0, chosen)
+    if not urls:
+        chosen = _extract_privacy_url(discovery_source)
+        if chosen:
+            urls = [chosen.rstrip("/")]
+
+    if not urls:
         return html, False
 
-    block = block4_privacy(chosen)
-    if "Start--Privacy Link goes here" in html:
+    result = html
+    changed = False
+
+    if "Start--Privacy Link goes here" in result:
+        block = block4_privacy(urls[0])
         updated = re.sub(
             r"<!-----Start--Privacy Link goes here[\s\S]*?<!-----END---Privacy Link goes here ---->",
             block,
-            html,
+            result,
             count=1,
             flags=re.IGNORECASE,
         )
-        return updated, updated != html
+        if updated != result:
+            result = updated
+            changed = True
 
-    escaped = re.escape(chosen.rstrip("/"))
-    anchor_pattern = rf'<a\b[^>]*href=["\']{escaped}/?["\'][^>]*>[\s\S]*?</a>'
-    if re.search(anchor_pattern, html, re.IGNORECASE):
-        updated = re.sub(anchor_pattern, block, html, count=1, flags=re.IGNORECASE)
-        return updated, True
+    for url in urls:
+        updated, ok = _apply_deeplink_to_anchor(result, url)
+        if ok:
+            result = updated
+            changed = True
 
-    footer_match = re.search(r"(<td[^>]*>[\s\S]{0,200}политик)", html, re.IGNORECASE)
-    if footer_match:
-        idx = footer_match.start()
-        return html[:idx] + block + "\n" + html[idx:], True
-    if "</body>" in html.lower():
-        return re.sub(r"</body>", block + "\n</body>", html, count=1, flags=re.IGNORECASE), True
-    return html + "\n" + block, True
+    return result, changed
 
 
 def _replace_cxq_block(html: str, params: ConversionParams) -> tuple[str, bool]:
@@ -291,10 +337,10 @@ def convert_mindbox_to_sfmc(html: str, params: ConversionParams) -> ConversionRe
     else:
         warnings.append("Блок №3: не найден текст про некорректное отображение письма")
 
-    result, ok = _replace_or_insert_privacy(result, params.privacy_url)
+    result, ok = _replace_or_insert_privacy(result, params.privacy_url, source_html=html)
     if ok:
         privacy_source = params.privacy_url.strip() or _extract_privacy_url(html)
-        changes.append(f"Обновлен блок Privacy Link (docsfera.ru: {privacy_source})")
+        changes.append(f"Добавлен deeplink ContentBlock 1649 (docsfera.ru: {privacy_source})")
     else:
         warnings.append("Блок №4 (Privacy): ссылка docsfera.ru не найдена в исходном HTML")
 
