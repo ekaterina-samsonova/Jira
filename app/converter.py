@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import html as html_lib
 import re
 from dataclasses import dataclass
+from typing import Callable
 
 from app.blocks import (
     ConversionParams,
@@ -109,26 +111,62 @@ def _extract_privacy_url(html: str) -> str:
     return links[0] if links else ""
 
 
-def _personalization_field_map(params: ConversionParams) -> list[tuple[str, str]]:
+_CXQ_HREF_RE = re.compile(
+    r'(<a\b[^>]*\bhref\s*=\s*)(["\'])(https?://docsfera\.ru/voting/cxq/?\?[^"\']*)(\2)',
+    re.IGNORECASE,
+)
+_CXQ_URL_RE = re.compile(
+    r"https?://docsfera\.ru/voting/cxq/?\?[^\"'\s<>]+",
+    re.IGNORECASE,
+)
+
+
+def _map_recipient_field(field_name: str, params: ConversionParams) -> str:
     middle_field = "Attribute1" if params.personalization_mode == "manual" else "MiddleName"
+    normalized = re.sub(r"[\s_\-]", "", field_name.lower())
+    if normalized in {"title", "salutation", "obraschenie", "appeal"}:
+        return "%%=v(@title)=%%"
+    if normalized in {"firstname", "first", "name", "imya", "getname", "fullname"}:
+        return "%%=v(FirstName)=%%"
+    if normalized in {"middlename", "middle", "otchestvo", "patronymic", "secondname"}:
+        return f"%%=v({middle_field})=%%"
+    if normalized in {"lastname", "last", "surname", "familiya", "familyname"}:
+        return "%%=v(LastName)=%%"
+    return f"%%=v({middle_field})=%%"
+
+
+def _personalization_replacements(params: ConversionParams) -> list[tuple[str, str | Callable[[re.Match[str]], str]]]:
+    middle_field = "Attribute1" if params.personalization_mode == "manual" else "MiddleName"
+
+    def map_recipient(match: re.Match[str]) -> str:
+        return _map_recipient_field(match.group(1), params)
+
     return [
-        (r"<span>\s*\$\{Recipient\.Title\}\s*</span>", "%%=v(@title)=%%"),
-        (r"\$\{Recipient\.Title\}", "%%=v(@title)=%%"),
-        (r"\$\{Recipient\.FirstName\}", "%%=v(FirstName)=%%"),
-        (r"\$\{Recipient\.MiddleName\}", f"%%=v({middle_field})=%%"),
-        (r"\$\{Recipient\.LastName\}", "%%=v(LastName)=%%"),
+        (r"<span>\s*\$\{\s*Recipient\s*\.\s*Title\s*\}\s*</span>", "%%=v(@title)=%%"),
+        (r"\$\{\s*Recipient\s*\.\s*Title\s*\}", "%%=v(@title)=%%"),
+        (r"\$\{\s*Recipient\s*\.\s*FirstName\s*\}", "%%=v(FirstName)=%%"),
+        (r"\$\{\s*Recipient\s*\.\s*MiddleName\s*\}", f"%%=v({middle_field})=%%"),
+        (r"\$\{\s*Recipient\s*\.\s*LastName\s*\}", "%%=v(LastName)=%%"),
+        (r"\$\{\s*Recipient\s*\.\s*(\w+)\s*\}", map_recipient),
         (r"%Recipient\.Title%", "%%=v(@title)=%%"),
         (r"%Recipient\.FirstName%", "%%=v(FirstName)=%%"),
         (r"%Recipient\.MiddleName%", f"%%=v({middle_field})=%%"),
         (r"%Recipient\.LastName%", "%%=v(LastName)=%%"),
+        (r"(?<![(\w])@Title\b", "%%=v(@title)=%%"),
+        (r"(?<![(\w])@FirstName\b", "%%=v(FirstName)=%%"),
+        (r"(?<![(\w])@MiddleName\b", f"%%=v({middle_field})=%%"),
+        (r"(?<![(\w])@LastName\b", "%%=v(LastName)=%%"),
     ]
 
 
 def _replace_personalization(html: str, params: ConversionParams) -> tuple[str, bool]:
-    result = html
+    result = html_lib.unescape(html)
     token_hits = 0
-    for pattern, replacement in _personalization_field_map(params):
-        updated, count = re.subn(pattern, replacement, result, flags=re.IGNORECASE)
+    for pattern, replacement in _personalization_replacements(params):
+        if callable(replacement):
+            updated, count = re.subn(pattern, replacement, result, flags=re.IGNORECASE)
+        else:
+            updated, count = re.subn(pattern, replacement, result, flags=re.IGNORECASE)
         if count:
             token_hits += count
             result = updated
@@ -136,8 +174,17 @@ def _replace_personalization(html: str, params: ConversionParams) -> tuple[str, 
     if token_hits:
         return result, True
 
+    if re.search(r"\$\{\s*Recipient\s*\.", result, re.IGNORECASE):
+        return html, False
+
     greeting = block4_personalization(params)
-    for pattern in (r"Здравствуйте[\s\S]*?!", r"Добрый\s+день[\s\S]*?!"):
+    fallback_patterns = [
+        r"Здравствуйте[\s\S]*?!",
+        r"Добрый\s+день[\s\S]*?!",
+        r"Здравствуйте[\s\S]{0,800}?(?=</span>|</p>|</td>|</div>|</tr>|$)",
+        r"Добрый\s+день[\s\S]{0,800}?(?=</span>|</p>|</td>|</div>|</tr>|$)",
+    ]
+    for pattern in fallback_patterns:
         updated, count = re.subn(pattern, greeting, result, count=1, flags=re.IGNORECASE)
         if count:
             return updated, True
@@ -220,24 +267,45 @@ def _apply_all_docsfera_deeplinks(html: str) -> tuple[str, int]:
     return result, count
 
 
-def _replace_cxq_block(html: str, params: ConversionParams) -> tuple[str, bool]:
-    if "docsfera.ru/voting/cxq" not in html.lower():
-        return html, False
-
-    updated = re.sub(
-        r"https?://docsfera\.ru/voting/cxq/\?[^\"'\s<>]+",
-        lambda match: build_cxq_url(params, _extract_cxq_rating(match.group(0))),
-        html,
-    )
-    return updated, updated != html
-
-
 def _extract_cxq_rating(url: str) -> int:
-    match = re.search(r"[?&]R=(\d)", url, re.IGNORECASE)
+    decoded = html_lib.unescape(url)
+    match = re.search(r"(?:[?&]|&amp;)R=(\d)", decoded, re.IGNORECASE)
     if match:
         value = int(match.group(1))
         return max(1, min(7, value))
     return 1
+
+
+def _replace_cxq_block(html: str, params: ConversionParams) -> tuple[str, bool]:
+    if not re.search(r"docsfera\.ru/voting/cxq", html, re.IGNORECASE):
+        return html, False
+
+    count = 0
+
+    def replace_href(match: re.Match[str]) -> str:
+        nonlocal count
+        original = match.group(3)
+        rating = _extract_cxq_rating(original)
+        new_url = build_cxq_url(params, rating)
+        if new_url != original:
+            count += 1
+        return f"{match.group(1)}{match.group(2)}{new_url}{match.group(4)}"
+
+    result = _CXQ_HREF_RE.sub(replace_href, html)
+
+    if count == 0:
+        def replace_bare(match: re.Match[str]) -> str:
+            nonlocal count
+            original = match.group(0)
+            rating = _extract_cxq_rating(original)
+            new_url = build_cxq_url(params, rating)
+            if new_url != original:
+                count += 1
+            return new_url
+
+        result = _CXQ_URL_RE.sub(replace_bare, result)
+
+    return result, count > 0
 
 
 def _ensure_unsubscribe_alias(anchor: str) -> str:
@@ -375,7 +443,7 @@ def convert_mindbox_to_sfmc(html: str, params: ConversionParams) -> ConversionRe
         if ok:
             changes.append("Обновлены href в CXQ-ссылках (блок №5) — вёрстка сохранена")
         else:
-            warnings.append("Блок №5: CXQ-ссылки не найдены — проверьте вручную")
+            warnings.append("Блок №5: CXQ-ссылки не найдены или параметры уже совпадают — проверьте вручную")
     else:
         warnings.append("Блок №5: укажите Brand для генерации CXQ-ссылок")
 

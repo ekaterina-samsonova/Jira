@@ -198,7 +198,11 @@ def _validate_block5(report: ValidationReport, html: str) -> None:
         )
         return
 
-    urls = re.findall(r"https?://docsfera\.ru/voting/cxq/\?[^\"'\s<>]+", html, re.IGNORECASE)
+    urls = re.findall(
+        r'https?://docsfera\.ru/voting/cxq/?\?[^"\']+',
+        html,
+        re.IGNORECASE,
+    )
     if not urls:
         report.add(
             "Блок №5 (CXQ)",

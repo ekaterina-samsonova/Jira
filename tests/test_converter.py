@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from app.blocks import ConversionParams, build_cxq_url
-from app.converter import convert_mindbox_to_sfmc
+from app.converter import convert_mindbox_to_sfmc, _replace_cxq_block
 from app.validator import validate_sfmc_html
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample_mindbox.html"
@@ -30,7 +30,10 @@ def test_convert_inserts_mandatory_blocks():
     assert "Политика конфиденциальности" in result.html
     assert 'href="%%=RedirectTo(@UnsubscribeUrl)=%%"' in result.html
     assert "utm_campaign=Campaign_Test_Q2_2026" in result.html
-    assert "Здравствуйте, %%=v(@title)=%% %%=v(FirstName)=%% %%=v(MiddleName)=%%!" in result.html
+    assert "%%=v(@title)=%%" in result.html
+    assert "%%=v(FirstName)=%%" in result.html
+    assert "%%=v(MiddleName)=%%" in result.html
+    assert "%%=v(%%=v(@title)=%%)=%%" not in result.html
     assert "docsfera.ru/voting/cxq/" in result.html
     assert 'alias="unsubscribe"' in result.html
     assert "${Recipient.FirstName}" not in result.html
@@ -79,7 +82,10 @@ def test_digest_button_keeps_markup_with_deeplink():
     assert "font-size: 18px" in result.html
     assert "Start--Privacy Link goes here" in result.html
     assert "RedirectTo(@UnsubscribeUrl)" in result.html
-    assert "Здравствуйте, %%=v(@title)=%% %%=v(FirstName)=%% %%=v(MiddleName)=%%!" in result.html
+    assert "%%=v(@title)=%%" in result.html
+    assert "%%=v(FirstName)=%%" in result.html
+    assert "%%=v(MiddleName)=%%" in result.html
+    assert "%%=v(%%=v(@title)=%%)=%%" not in result.html
     assert "${Recipient.FirstName}" not in result.html
 
 
@@ -120,6 +126,49 @@ def test_view_online_preserves_anchor_markup():
     assert 'href="%%view_email_url%%"' in result
     assert 'style="color:#8e136d;"' in result
     assert "<span>сюда</span>" in result
+
+
+def test_cxq_without_slash_before_query():
+    html = '<a href="https://docsfera.ru/voting/cxq?R=3&Brand=OLD">3</a>'
+    params = ConversionParams(
+        utm_campaign="Campaign_Test_Q2_2026",
+        cxq_brand="PRALUENT",
+        cxq_da="DYSLIPIDEMIA",
+        cxq_ta="CARDIOLOGY",
+    )
+    result, ok = _replace_cxq_block(html, params)
+    assert ok
+    assert "Brand=PRALUENT" in result
+    assert "Brand=OLD" not in result
+
+
+def test_cxq_with_html_entities():
+    html = '<a href="https://docsfera.ru/voting/cxq/?Channel=email&amp;R=4&amp;Brand=OLD">4</a>'
+    params = ConversionParams(
+        utm_campaign="Campaign_Test_Q2_2026",
+        cxq_brand="PRALUENT",
+        cxq_da="DYSLIPIDEMIA",
+        cxq_ta="CARDIOLOGY",
+    )
+    result, ok = _replace_cxq_block(html, params)
+    assert ok
+    assert "R=4" in result
+    assert "Brand=PRALUENT" in result
+
+
+def test_personalization_mindbox_variants():
+    from app.converter import _replace_personalization
+
+    params = ConversionParams()
+    cases = [
+        ("Здравствуйте, ${ recipient.firstName }!", "%%=v(FirstName)=%%"),
+        ("Здравствуйте, @Title @FirstName @MiddleName!", "%%=v(@title)=%%"),
+        ("Здравствуйте, ${Recipient.CustomField}!", "%%=v(MiddleName)=%%"),
+    ]
+    for source, expected in cases:
+        out, ok = _replace_personalization(source, params)
+        assert ok, source
+        assert expected in out, source
 
 
 def test_validate_after_conversion_passes():

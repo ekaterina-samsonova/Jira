@@ -680,7 +680,7 @@
       </div>
       <h1 class="header-title">Sanofi | Mindbox → SFMC Converter v3</h1>
       <p class="header-subtitle">Одноколоночный мастер конвертации шаблонов для SFMC.</p>
-      <div class="version-banner">Версия 3.5 — deeplink/CXQ/отписка без изменения вёрстки</div>
+      <div class="version-banner">Версия 3.6 — надёжнее CXQ и персонализация Mindbox</div>
     </div>
   </header>
 
@@ -1016,18 +1016,39 @@
         : "Здравствуйте, %%=v(@title)=%% %%=v(FirstName)=%% %%=v(MiddleName)=%%!";
     }
 
+    function mapRecipientField(fieldName, p) {
+      const middle = p.personalization_mode === "manual" ? "Attribute1" : "MiddleName";
+      const key = fieldName.toLowerCase().replace(/[\s_\-]/g, "");
+      if (["title", "salutation", "obraschenie", "appeal"].includes(key)) return "%%=v(@title)=%%";
+      if (["firstname", "first", "name", "imya", "getname", "fullname"].includes(key)) return "%%=v(FirstName)=%%";
+      if (["middlename", "middle", "otchestvo", "patronymic", "secondname"].includes(key)) return `%%=v(${middle})=%%`;
+      if (["lastname", "last", "surname", "familiya", "familyname"].includes(key)) return "%%=v(LastName)=%%";
+      return `%%=v(${middle})=%%`;
+    }
+
+    function decodeHtml(value) {
+      const el = document.createElement("textarea");
+      el.innerHTML = value;
+      return el.value;
+    }
+
     function personalizationFieldMap(p) {
       const middle = p.personalization_mode === "manual" ? "Attribute1" : "MiddleName";
       return [
-        [/<span>\s*\$\{Recipient\.Title\}\s*<\/span>/gi, "%%=v(@title)=%%"],
-        [/\$\{Recipient\.Title\}/gi, "%%=v(@title)=%%"],
-        [/\$\{Recipient\.FirstName\}/gi, "%%=v(FirstName)=%%"],
-        [/\$\{Recipient\.MiddleName\}/gi, `%%=v(${middle})=%%`],
-        [/\$\{Recipient\.LastName\}/gi, "%%=v(LastName)=%%"],
+        [/<span>\s*\$\{\s*Recipient\s*\.\s*Title\s*\}\s*<\/span>/gi, "%%=v(@title)=%%"],
+        [/\$\{\s*Recipient\s*\.\s*Title\s*\}/gi, "%%=v(@title)=%%"],
+        [/\$\{\s*Recipient\s*\.\s*FirstName\s*\}/gi, "%%=v(FirstName)=%%"],
+        [/\$\{\s*Recipient\s*\.\s*MiddleName\s*\}/gi, `%%=v(${middle})=%%`],
+        [/\$\{\s*Recipient\s*\.\s*LastName\s*\}/gi, "%%=v(LastName)=%%"],
+        [/\$\{\s*Recipient\s*\.\s*(\w+)\s*\}/gi, (match, field) => mapRecipientField(field, p)],
         [/%Recipient\.Title%/gi, "%%=v(@title)=%%"],
         [/%Recipient\.FirstName%/gi, "%%=v(FirstName)=%%"],
         [/%Recipient\.MiddleName%/gi, `%%=v(${middle})=%%`],
         [/%Recipient\.LastName%/gi, "%%=v(LastName)=%%"],
+        [/(?<![(\w])@Title\b/gi, "%%=v(@title)=%%"],
+        [/(?<![(\w])@FirstName\b/gi, "%%=v(FirstName)=%%"],
+        [/(?<![(\w])@MiddleName\b/gi, `%%=v(${middle})=%%`],
+        [/(?<![(\w])@LastName\b/gi, "%%=v(LastName)=%%"],
       ];
     }
 
@@ -1155,24 +1176,60 @@
     }
 
     function replacePersonalization(html, p) {
-      let result = html;
+      let result = decodeHtml(html);
       let tokenHits = 0;
       for (const [pattern, replacement] of personalizationFieldMap(p)) {
-        const updated = result.replace(pattern, replacement);
+        const updated = typeof replacement === "function"
+          ? result.replace(pattern, replacement)
+          : result.replace(pattern, replacement);
         if (updated !== result) {
           tokenHits += 1;
           result = updated;
         }
       }
       if (tokenHits) return { html: result, changed: true };
+      if (/\$\{\s*Recipient\s*\./i.test(result)) return { html, changed: false };
 
       const greeting = block4Personalization(p);
-      for (const pattern of [/Здравствуйте[\s\S]*?!/i, /Добрый\s+день[\s\S]*?!/i]) {
+      for (const pattern of [
+        /Здравствуйте[\s\S]*?!/i,
+        /Добрый\s+день[\s\S]*?!/i,
+        /Здравствуйте[\s\S]{0,800}?(?=<\/span>|<\/p>|<\/td>|<\/div>|<\/tr>|$)/i,
+        /Добрый\s+день[\s\S]{0,800}?(?=<\/span>|<\/p>|<\/td>|<\/div>|<\/tr>|$)/i,
+      ]) {
         if (pattern.test(result)) {
           return { html: result.replace(pattern, greeting), changed: true };
         }
       }
       return { html, changed: false };
+    }
+
+    function extractCxqRating(url) {
+      const decoded = decodeHtml(url);
+      const match = decoded.match(/(?:[?&]|&amp;)R=(\d)/i);
+      if (match) return Math.max(1, Math.min(7, Number(match[1])));
+      return 1;
+    }
+
+    function replaceCxqLinks(html, p) {
+      if (!/docsfera\.ru\/voting\/cxq/i.test(html)) return { html, changed: false };
+      let count = 0;
+      const hrefRe = /(<a\b[^>]*\bhref\s*=\s*)(["'])(https?:\/\/docsfera\.ru\/voting\/cxq\/?\?[^"']*)(\2)/gi;
+      let result = html.replace(hrefRe, (match, open, quote, url, close) => {
+        const rating = extractCxqRating(url);
+        const next = buildCxqUrl(p, rating);
+        if (next !== url) count += 1;
+        return `${open}${quote}${next}${close}`;
+      });
+      if (!count) {
+        result = result.replace(/https?:\/\/docsfera\.ru\/voting\/cxq\/?\?[^"'\s<>]+/gi, (url) => {
+          const rating = extractCxqRating(url);
+          const next = buildCxqUrl(p, rating);
+          if (next !== url) count += 1;
+          return next;
+        });
+      }
+      return { html: result, changed: count > 0 };
     }
 
     function convertMindboxToSfmc(html, p) {
@@ -1217,15 +1274,12 @@
         if (p.cxq_cn.toLowerCase() !== "promo" && !p.utm_campaign) {
           warnings.push("Блок №5: utm_campaign обязателен для CXQ, когда CN не promo");
         }
-        if (/docsfera\.ru\/voting\/cxq/i.test(result)) {
-          result = result.replace(/https?:\/\/docsfera\.ru\/voting\/cxq\/\?[^"'\s<>]+/gi, (url) => {
-            const ratingMatch = url.match(/[?&]R=(\d)/i);
-            const rating = ratingMatch ? Math.max(1, Math.min(7, Number(ratingMatch[1]))) : 1;
-            return buildCxqUrl(p, rating);
-          });
+        const cxqResult = replaceCxqLinks(result, p);
+        result = cxqResult.html;
+        if (cxqResult.changed) {
           changes.push("Обновлены href в CXQ-ссылках (блок №5) — вёрстка сохранена");
         } else {
-          warnings.push("Блок №5: CXQ-ссылки не найдены");
+          warnings.push("Блок №5: CXQ-ссылки не найдены или параметры уже совпадают");
         }
       } else {
         warnings.push("Блок №5: укажите Brand");
