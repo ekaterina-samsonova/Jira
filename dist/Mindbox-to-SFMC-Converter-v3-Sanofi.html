@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sanofi | Mindbox → SFMC Converter v3</title>
+  <style>
+    :root {
+      --sanofi-purple: #7A00E6;
+      --sanofi-black: #000000;
+      --sanofi-white: #FFFFFF;
+      --bg: #f7f7fb;
+      --line: #ddd9ea;
+      --text-soft: #4b4b58;
+      --danger: #d92222;
+      --success-bg: #e8f9ee;
+      --success-line: #2ea35f;
+      --error-bg: #ffe9e9;
+      --error-line: #d12f2f;
+      --warning-bg: #fff9df;
+      --warning-line: #f0bd27;
+      --card-shadow: 0 14px 35px rgba(0, 0, 0, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--sanofi-black);
+      background: linear-gradient(180deg, #f7f7fb 0%, #f3eefb 100%);
+      padding-bottom: 112px;
+    }
+
+    .toast {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 1200;
+      min-width: 280px;
+      max-width: 420px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-weight: 700;
+      transform: translateY(-16px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.success {
+      background: var(--success-bg);
+      border: 2px solid var(--success-line);
+      color: #145530;
+    }
+
+    .toast.error {
+      background: var(--error-bg);
+      border: 2px solid var(--error-line);
+      color: #7f1d1d;
+    }
+
+    .toast.info {
+      background: #efe4ff;
+      border: 2px solid var(--sanofi-purple);
+      color: #3a0c6d;
+    }
+
+    .sanofi-header {
+      width: 100%;
+      background: var(--sanofi-purple);
+      color: var(--sanofi-white);
+      padding: 28px 20px 26px;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.2);
+    }
+
+    .header-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .wordmark {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      background: var(--sanofi-white);
+      color: var(--sanofi-black);
+      border-radius: 999px;
+      padding: 9px 20px 9px 18px;
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+
+    .wordmark .dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--sanofi-purple);
+      right: 10px;
+    }
+
+    .wordmark .dot.dot-1 { top: 8px; }
+    .wordmark .dot.dot-2 { bottom: 8px; }
+
+    .header-title {
+      margin: 0;
+      font-size: clamp(24px, 3.3vw, 38px);
+      font-weight: 900;
+      line-height: 1.08;
+    }
+
+    .header-subtitle {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.92;
+    }
+
+    .version-banner {
+      width: fit-content;
+      max-width: 100%;
+      background: #ffd74f;
+      color: var(--sanofi-black);
+      font-weight: 900;
+      font-size: 18px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 2px solid var(--sanofi-black);
+    }
+
+    .page {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .wizard-steps {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+    }
+
+    .step-card {
+      display: grid;
+      grid-template-columns: 82px 1fr;
+      align-items: center;
+      border-left: 10px solid var(--sanofi-purple);
+      background: var(--sanofi-white);
+      border-radius: 14px;
+      border-top: 2px solid var(--line);
+      border-right: 2px solid var(--line);
+      border-bottom: 2px solid var(--line);
+      padding: 14px 16px;
+      box-shadow: var(--card-shadow);
+    }
+
+    .step-card.active {
+      border-left-color: var(--sanofi-black);
+      background: #f3e6ff;
+    }
+
+    .step-card.done {
+      border-left-color: #1b8f49;
+      background: #effcf3;
+    }
+
+    .step-number {
+      font-size: 52px;
+      font-weight: 900;
+      color: var(--sanofi-purple);
+      line-height: 1;
+      text-align: center;
+    }
+
+    .step-card.active .step-number { color: var(--sanofi-black); }
+    .step-card.done .step-number { color: #1b8f49; }
+
+    .step-content strong {
+      display: block;
+      font-size: 20px;
+      margin-bottom: 3px;
+    }
+
+    .step-content span {
+      display: block;
+      color: var(--text-soft);
+      font-size: 14px;
+    }
+
+    .wizard-card {
+      background: var(--sanofi-white);
+      border-radius: 16px;
+      border: 2px solid var(--line);
+      box-shadow: var(--card-shadow);
+      overflow: hidden;
+    }
+
+    .wizard-card .card-head {
+      padding: 20px 22px 12px;
+      border-bottom: 1px solid #ece8f4;
+      background: #fcf9ff;
+    }
+
+    .wizard-card .card-head h2 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.1;
+    }
+
+    .wizard-card .card-head p {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 15px;
+    }
+
+    .wizard-card .card-body {
+      padding: 22px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .upload-zone {
+      min-height: 290px;
+      border: 4px dashed var(--sanofi-purple);
+      border-radius: 18px;
+      background: linear-gradient(180deg, #f7f0ff 0%, #ffffff 100%);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 20px;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag {
+      border-color: var(--sanofi-black);
+      background: linear-gradient(180deg, #efe0ff 0%, #ffffff 100%);
+    }
+
+    .upload-icon {
+      width: 94px;
+      height: 94px;
+      border-radius: 24px;
+      background: var(--sanofi-purple);
+      color: var(--sanofi-white);
+      font-size: 48px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 14px;
+    }
+
+    .upload-zone h3 {
+      margin: 0 0 8px;
+      font-size: clamp(24px, 3.8vw, 34px);
+    }
+
+    .upload-zone p {
+      margin: 0;
+      font-size: 16px;
+      color: var(--text-soft);
+      font-weight: 600;
+    }
+
+    .file-chip {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border: 2px solid var(--sanofi-purple);
+      border-radius: 14px;
+      background: #f4e9ff;
+      padding: 14px 16px;
+    }
+
+    .file-chip.visible { display: flex; }
+
+    .file-chip-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .file-chip-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 10px;
+      background: var(--sanofi-white);
+      border: 2px solid var(--sanofi-purple);
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .file-chip-name {
+      font-size: 16px;
+      font-weight: 800;
+      word-break: break-word;
+    }
+
+    .file-chip-meta {
+      margin-top: 3px;
+      color: var(--text-soft);
+      font-size: 12px;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 21px;
+      font-weight: 900;
+      color: var(--sanofi-purple);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-badge {
+      background: var(--sanofi-purple);
+      color: var(--sanofi-white);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-radius: 999px;
+      padding: 4px 8px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field label {
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .required {
+      color: var(--danger);
+      margin-left: 3px;
+      font-weight: 900;
+    }
+
+    .field small {
+      color: var(--text-soft);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      height: 48px;
+      border-radius: 10px;
+      border: 2px solid #d6d1e2;
+      padding: 0 13px;
+      font: inherit;
+      background: var(--sanofi-white);
+      color: var(--sanofi-black);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .brand-list select {
+      min-height: 180px;
+      height: auto;
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--sanofi-purple);
+      box-shadow: 0 0 0 4px rgba(122, 0, 230, 0.14);
+      outline: none;
+    }
+
+    .field.invalid input,
+    .field.invalid select {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 4px rgba(217, 34, 34, 0.14);
+    }
+
+    .brand-box {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .inline-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      border: 2px solid var(--sanofi-purple);
+      background: var(--sanofi-white);
+      color: var(--sanofi-purple);
+      border-radius: 999px;
+      padding: 10px 16px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .tab.active {
+      background: var(--sanofi-purple);
+      color: var(--sanofi-white);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .status-banner {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      border-radius: 14px;
+      padding: 14px;
+      border: 2px solid transparent;
+      margin-bottom: 4px;
+    }
+
+    .status-banner.visible { display: flex; }
+
+    .status-banner.ok {
+      background: var(--success-bg);
+      border-color: var(--success-line);
+    }
+
+    .status-banner.bad {
+      background: var(--error-bg);
+      border-color: var(--error-line);
+    }
+
+    .status-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      font-weight: 900;
+      flex-shrink: 0;
+      color: inherit;
+      background: var(--sanofi-white);
+    }
+
+    .result-box {
+      border: 2px solid #e2deec;
+      border-radius: 12px;
+      background: #faf8ff;
+      padding: 14px;
+      min-height: 220px;
+    }
+
+    .empty {
+      min-height: 180px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--text-soft);
+      padding: 16px;
+    }
+
+    .empty-icon {
+      font-size: 34px;
+      margin-bottom: 8px;
+    }
+
+    .issue {
+      border: 2px solid #dcd7ea;
+      border-left: 8px solid #7a7a85;
+      border-radius: 10px;
+      background: var(--sanofi-white);
+      padding: 10px 12px;
+      margin-bottom: 9px;
+    }
+
+    .issue.error {
+      border-left-color: var(--error-line);
+      background: #fff5f5;
+    }
+
+    .issue.warning {
+      border-left-color: var(--warning-line);
+      background: var(--warning-bg);
+    }
+
+    .issue.info {
+      border-left-color: var(--sanofi-purple);
+      background: #f7f0ff;
+    }
+
+    .issue .meta {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+    }
+
+    .issue .msg {
+      margin-top: 4px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .issue .hint,
+    .issue .snippet {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--text-soft);
+      line-height: 1.4;
+    }
+
+    .code-preview {
+      margin: 0;
+      min-height: 220px;
+      max-height: 400px;
+      overflow: auto;
+      background: #11041f;
+      border-radius: 10px;
+      color: #f0deff;
+      padding: 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .action-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.9);
+      border-top: 3px solid var(--sanofi-purple);
+      backdrop-filter: blur(3px);
+      padding: 12px 14px;
+    }
+
+    .action-bar-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .btn {
+      min-height: 50px;
+      border-radius: 12px;
+      border: 2px solid transparent;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+
+    .btn:disabled {
+      opacity: 0.52;
+      cursor: not-allowed;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--sanofi-purple);
+      color: var(--sanofi-white);
+      border-color: #bb87f4;
+    }
+
+    .btn-secondary {
+      background: var(--sanofi-white);
+      color: var(--sanofi-purple);
+      border-color: var(--sanofi-purple);
+    }
+
+    .btn-success {
+      background: #0f8f49;
+      color: var(--sanofi-white);
+      border-color: #7fd2a7;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: #930000;
+      border-color: transparent;
+      min-height: 40px;
+      padding: 0 8px;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      border-top-color: var(--sanofi-white);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+
+    .btn.loading .spinner {
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 900px) {
+      .card-head h2 {
+        font-size: 24px;
+      }
+
+      .action-bar-inner {
+        grid-template-columns: 1fr;
+      }
+
+      body {
+        padding-bottom: 206px;
+      }
+
+      .step-card {
+        grid-template-columns: 64px 1fr;
+      }
+
+      .step-number {
+        font-size: 44px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast"></div>
+
+  <header class="sanofi-header">
+    <div class="header-inner">
+      <div class="wordmark" aria-label="sanofi logo">
+        <span>sanofi</span>
+        <span class="dot dot-1" aria-hidden="true"></span>
+        <span class="dot dot-2" aria-hidden="true"></span>
+      </div>
+      <h1 class="header-title">Sanofi | Mindbox → SFMC Converter v3</h1>
+      <p class="header-subtitle">Одноколоночный мастер конвертации шаблонов для SFMC.</p>
+      <div class="version-banner">Версия 4.1 — CXQ из формы и таблицы маппинга, Qualtrics как отдельный тип</div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="wizard-steps">
+      <div class="step-card active" id="step-indicator-1">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <strong>Загрузите исходный Mindbox HTML</strong>
+          <span>Сначала добавьте файл: drag &amp; drop или кнопка выбора.</span>
+        </div>
+      </div>
+      <div class="step-card" id="step-indicator-2">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <strong>Заполните параметры конвертации</strong>
+          <span>Укажите обязательные поля, затем проверьте шаблон.</span>
+        </div>
+      </div>
+      <div class="step-card" id="step-indicator-3">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <strong>Конвертируйте и скачайте результат</strong>
+          <span>Проверьте отчёт снизу и скачайте готовый SFMC HTML.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="wizard-card">
+      <div class="card-head">
+        <h2>Шаг 1. Загрузка файла</h2>
+        <p>Зона загрузки увеличена для максимально заметного и понятного действия.</p>
+      </div>
+      <div class="card-body">
+        <input type="file" id="file-input" accept=".html,.htm,text/html" hidden>
+
+        <div class="upload-zone" id="upload-zone">
+          <div>
+            <div class="upload-icon">⬆</div>
+            <h3>Загрузите HTML-файл сюда</h3>
+            <p><strong>Нажмите или перетащите файл</strong> для старта конвертации Mindbox → SFMC.</p>
+          </div>
+        </div>
+
+        <div class="file-chip" id="file-chip">
+          <div class="file-chip-main">
+            <div class="file-chip-icon">📄</div>
+            <div>
+              <div class="file-chip-name" id="file-name"></div>
+              <div class="file-chip-meta" id="file-meta"></div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-ghost" id="clear-file-btn">Удалить файл</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="wizard-card">
+      <div class="card-head">
+        <h2>Шаг 2. Параметры</h2>
+        <p>Все поля выстроены в один понятный поток. Обязательные отмечены красной звёздочкой.</p>
+      </div>
+      <div class="card-body">
+        <h3 class="section-title">Основные параметры <span class="section-badge">блоки №1–№4</span></h3>
+        <div class="form-grid">
+          <div class="field">
+            <label for="data_extension">Data Extension</label>
+            <input id="data_extension" value="Akamai_profiles_consents_bounced">
+            <small>Используется в блоке Lookup. Для нестандартного значения появится предупреждение.</small>
+          </div>
+          <div class="field">
+            <label for="personalization_mode">Режим персонализации</label>
+            <select id="personalization_mode">
+              <option value="de">DE Akamai — MiddleName</option>
+              <option value="manual">Ручная выгрузка — Attribute1</option>
+            </select>
+            <small>Заменяет приветствие Mindbox на SFMC-токены в блоке №4.</small>
+          </div>
+        </div>
+
+        <h3 class="section-title">CXQ-метки <span class="section-badge">блок №5</span></h3>
+        <p style="margin:0 0 16px;color:var(--muted);font-size:14px;">Поля необязательны. Если форма пустая — CXQ-ссылки остаются как в файле. При заполнении Brand/DA/TA (и др.) значения берутся из формы и таблицы маппинга, а не из HTML Mindbox.</p>
+        <div class="form-grid">
+          <div class="field">
+            <label for="brand_search">Поиск бренда</label>
+            <input id="brand_search" placeholder="Введите часть названия бренда...">
+            <small>Фильтрует список Brand в реальном времени.</small>
+          </div>
+          <div class="field">
+            <label for="cxq_brand">Brand</label>
+            <div class="brand-box">
+              <div class="brand-list">
+                <select id="cxq_brand" size="8"></select>
+              </div>
+            </div>
+            <small>Необязательно. При выборе бренда DA/TA подставляются из таблицы маппинга при конвертации.</small>
+          </div>
+          <div class="inline-grid">
+            <div class="field">
+              <label for="cxq_da">DA</label>
+              <input id="cxq_da" list="da-list" placeholder="Из таблицы маппинга по Brand">
+              <datalist id="da-list"></datalist>
+            </div>
+            <div class="field">
+              <label for="cxq_ta">TA</label>
+              <input id="cxq_ta" list="ta-list" placeholder="Из таблицы маппинга по Brand">
+              <datalist id="ta-list"></datalist>
+            </div>
+          </div>
+          <div class="field">
+            <label for="cxq_bu">BU</label>
+            <select id="cxq_bu"></select>
+          </div>
+          <div class="field">
+            <label for="cxq_function">Function</label>
+            <select id="cxq_function"></select>
+          </div>
+          <div class="field">
+            <label for="cxq_cn">CN</label>
+            <select id="cxq_cn"></select>
+            <small>Для promo utm_campaign в docsfera CXQ не добавляется.</small>
+          </div>
+          <div class="field field-wide" id="field-utm">
+            <label for="utm_campaign">utm_campaign <span class="required" id="utm-required" hidden>*</span></label>
+            <input id="utm_campaign" placeholder="Campaign_CV_Praluent_Q2_2026">
+            <small id="utm-help">Подставляется в CXQ-ссылки, если CN не promo.</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wizard-card">
+      <div class="card-head">
+        <h2>Шаг 3. Результаты и контроль качества</h2>
+        <p>Внизу — отчёт проверки, изменения после конвертации, предупреждения и предпросмотр HTML.</p>
+      </div>
+      <div class="card-body">
+        <div class="status-banner" id="status-banner">
+          <div class="status-icon" id="status-icon">✓</div>
+          <div>
+            <strong id="status-title">Готово</strong>
+            <div id="status-text" style="font-size:14px; margin-top:4px;"></div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button type="button" class="tab active" data-tab="validation">Проверка</button>
+          <button type="button" class="tab" data-tab="changes">Изменения</button>
+          <button type="button" class="tab" data-tab="preview">HTML</button>
+        </div>
+
+        <div class="tab-panel active" id="panel-validation">
+          <div class="result-box" id="validation">
+            <div class="empty">
+              <div>
+                <div class="empty-icon">🔍</div>
+                <div>Нажмите «Проверить HTML» или «Конвертировать в SFMC», чтобы увидеть статус.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="panel-changes">
+          <div class="result-box" id="changes">
+            <div class="empty">
+              <div>
+                <div class="empty-icon">🛠</div>
+                <div>Список фактических изменений отобразится после конвертации.</div>
+              </div>
+            </div>
+          </div>
+          <div class="result-box" id="warnings" style="margin-top:12px; display:none;"></div>
+        </div>
+
+        <div class="tab-panel" id="panel-preview">
+          <pre class="code-preview" id="preview">HTML-код появится после конвертации.</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="action-bar">
+    <div class="action-bar-inner">
+      <button type="button" class="btn btn-secondary" id="validate-btn">Проверить HTML</button>
+      <button type="button" class="btn btn-primary loading-capable" id="convert-btn">
+        <span class="spinner"></span>
+        <span>Конвертировать в SFMC</span>
+      </button>
+      <button type="button" class="btn btn-success" id="download-btn" disabled>Скачать SFMC HTML</button>
+    </div>
+  </div>
+
+  <script>
+    const CXQ = {"columns": ["Brand", "DA", "TA", "BU", "Function", "CN"], "rows": [{"Brand": "T1D Autoimmune", "DA": "TOPICS", "TA": "Endocrinology", "BU": "GENERAL MEDICINES", "Function": "Commercial", "CN": "promo"}, {"Brand": "DUPIXENT", "DA": "ATOPIC DERMATITIS", "TA": "Dermatology", "BU": "SPECIALTY CARE", "Function": "Medical", "CN": "journey"}, {"Brand": "LIBTAYO", "DA": "CERVICAL CANCER", "TA": "Oncology", "BU": "VACCINES", "Function": "", "CN": ""}, {"Brand": "APIDRA", "DA": "TYPE 1 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "TAVANIC", "DA": "ANTI-INFECTIVES", "TA": "OTHER GENERAL MEDICINES", "BU": "", "Function": "", "CN": ""}, {"Brand": "LANTUS", "DA": "TYPE 1 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "XENPOZYME", "DA": "ACID SPHINGOMYLENASE DEFICIENCY (NIEMANN-PICK)", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "TOUJEO", "DA": "TYPE 1 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "AMARYL", "DA": "TYPE 2 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "DUPIXENT", "DA": "ASTHMA", "TA": "Respiratory", "BU": "", "Function": "", "CN": ""}, {"Brand": "APIDRA", "DA": "TYPE 2 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "FOKUSIN", "DA": "BENIGN PROSTATIC HYPERPLASIA (BPH)", "TA": "OTHER GENERAL MEDICINES", "BU": "", "Function": "", "CN": ""}, {"Brand": "PENESTER", "DA": "BENIGN PROSTATIC HYPERPLASIA (BPH)", "TA": "OTHER GENERAL MEDICINES", "BU": "", "Function": "", "CN": ""}, {"Brand": "LANTUS", "DA": "TYPE 2 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "ORKAMBI", "DA": "CYSTIC FIBROSIS", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "LYXUMIA", "DA": "TYPE 2 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "TRIKAFTA", "DA": "CYSTIC FIBROSIS", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "SOLIQUA", "DA": "TYPE 2 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "TOUJEO", "DA": "TYPE 2 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "DUPIXENT", "DA": "CHRONIC OBSTRUCTIVE PULMONARY DISEASE (COPD)", "TA": "Respiratory", "BU": "", "Function": "", "CN": ""}, {"Brand": "ZALTRAP", "DA": "COLORECTAL CANCER", "TA": "Oncology", "BU": "", "Function": "", "CN": ""}, {"Brand": "PRALUENT", "DA": "DYSLIPIDEMIA", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "DUPIXENT", "DA": "CHRONIC RHINOSINUSITIS WITH NASAL POLYPS (CRSwNP)", "TA": "Rhinology", "BU": "", "Function": "", "CN": ""}, {"Brand": "ROSUCARD", "DA": "DYSLIPIDEMIA", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "ZENON", "DA": "DYSLIPIDEMIA", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "DUPIXENT", "DA": "EOSINOPHILIC ESOPHAGITIS (EoE)", "TA": "Gastroenterology", "BU": "", "Function": "", "CN": ""}, {"Brand": "FABRAZYME", "DA": "FABRY", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "CERDELGA", "DA": "GAUCHER", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "CEREZYME", "DA": "GAUCHER", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "GRANOCYTE", "DA": "NEUTROPHIL DEFICIENCY", "TA": "Oncology", "BU": "", "Function": "", "CN": ""}, {"Brand": "TRENTAL", "DA": "PERIPHERAL ARTERIAL DISEASE", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "APROVASC", "DA": "HYPERTENSION", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "JEVTANA", "DA": "PROSTATE CANCER", "TA": "Oncology", "BU": "", "Function": "", "CN": ""}, {"Brand": "APROVEL", "DA": "HYPERTENSION", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "DUPIXENT", "DA": "PRURIGO NODULARIS", "TA": "Dermatology", "BU": "", "Function": "", "CN": ""}, {"Brand": "LOZAP", "DA": "HYPERTENSION", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "LOZAP AM", "DA": "HYPERTENSION", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "MYOZYME", "DA": "POMPE", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "LOZAP PLUS", "DA": "HYPERTENSION", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "NEXVIAZYME", "DA": "POMPE", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "KEVZARA", "DA": "RHEUMATOID ARTHRITIS", "TA": "Rheumatology", "BU": "", "Function": "", "CN": ""}, {"Brand": "TELZAP", "DA": "HYPERTENSION", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "TELZAP AM", "DA": "HYPERTENSION", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "CAPRELSA", "DA": "THYROID CANCER", "TA": "Oncology", "BU": "", "Function": "", "CN": ""}, {"Brand": "TELZAP Plus", "DA": "HYPERTENSION", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "THYROGEN", "DA": "THYROID CANCER", "TA": "Oncology", "BU": "", "Function": "", "CN": ""}, {"Brand": "EVOLTRA", "DA": "LEUKEMIA/LYMPHOMA", "TA": "Oncology", "BU": "", "Function": "", "CN": ""}, {"Brand": "CLEXANE", "DA": "THROMBOSIS", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "SARCLISA", "DA": "MULTIPLE MYELOMA", "TA": "HEMATOLOGY", "BU": "", "Function": "", "CN": ""}, {"Brand": "ALDURAZYME", "DA": "MUCOPOLYSACCHARIDOSIS (MPS)", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "PLAVIX", "DA": "THROMBOSIS", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "MOZOBIL", "DA": "autologous HEMATOPOIETIC STEM CELL TRANSPLANTATION (aHSCT)", "TA": "Transplant", "BU": "", "Function": "", "CN": ""}, {"Brand": "AUBAGIO", "DA": "MULTIPLE SCLEROSIS", "TA": "Neurology", "BU": "", "Function": "", "CN": ""}, {"Brand": "LEMTRADA", "DA": "MULTIPLE SCLEROSIS", "TA": "Neurology", "BU": "", "Function": "", "CN": ""}, {"Brand": "PENTAXIM", "DA": "VACCINES", "TA": "VACCINES", "BU": "", "Function": "", "CN": ""}, {"Brand": "ADACEL", "DA": "VACCINES", "TA": "VACCINES", "BU": "", "Function": "", "CN": ""}, {"Brand": "MENACTRA", "DA": "VACCINES", "TA": "VACCINES", "BU": "", "Function": "", "CN": ""}, {"Brand": "DEPAKINE", "DA": "BIPOLAR DISORDER", "TA": "Psychiatry", "BU": "", "Function": "", "CN": ""}, {"Brand": "CABLIVI", "DA": "acquired THROMBOTIC THROMBOCYTOPENIC PURPURA (aTTP/iTTP)", "TA": "RARE BLOOD DISORDERS", "BU": "", "Function": "", "CN": ""}, {"Brand": "MENQUADFI", "DA": "VACCINES", "TA": "VACCINES", "BU": "", "Function": "", "CN": ""}, {"Brand": "ALYFTREK", "DA": "CYSTIC FIBROSIS", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "REZTIREG", "DA": "chronic GRAFT-VERSUS-HOST DISEASE (cGVHD)", "TA": "Transplant", "BU": "", "Function": "", "CN": ""}, {"Brand": "First infusion Xenpozyme", "DA": "TOPICS", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "Sanofi", "DA": "", "TA": "", "BU": "", "Function": "", "CN": ""}, {"Brand": "Old products", "DA": "", "TA": "", "BU": "", "Function": "", "CN": ""}, {"Brand": "DUPILUMAB", "DA": "ATOPIC DERMATITIS", "TA": "Dermatology", "BU": "", "Function": "", "CN": ""}, {"Brand": "CEMIPLIMAB", "DA": "CERVICAL CANCER", "TA": "Oncology", "BU": "", "Function": "", "CN": ""}, {"Brand": "INSULIN GLARGINE U100", "DA": "TYPE 1 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "INSULIN GLARGINE U300", "DA": "TYPE 1 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "LEVOFLOXACIN", "DA": "ANTI-INFECTIVES", "TA": "OTHER GENERAL MEDICINES", "BU": "", "Function": "", "CN": ""}, {"Brand": "INSULIN GLULISINE", "DA": "TYPE 1 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "OLIPUDASE ALFA", "DA": "ACID SPHINGOMYLENASE DEFICIENCY (NIEMANN-PICK)", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "TEPLIZUMAB", "DA": "TYPE 1 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "DUPILUMAB", "DA": "ASTHMA", "TA": "Respiratory", "BU": "", "Function": "", "CN": ""}, {"Brand": "CAPLACIZUMAB-YHDP", "DA": "acquired THROMBOTIC THROMBOCYTOPENIC PURPURA (aTTP/iTTP)", "TA": "RARE BLOOD DISORDERS", "BU": "", "Function": "", "CN": ""}, {"Brand": "GLIMEPIRIDE", "DA": "TYPE 2 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "FINASTERIDE", "DA": "BENIGN PROSTATIC HYPERPLASIA (BPH)", "TA": "OTHER GENERAL MEDICINES", "BU": "", "Function": "", "CN": ""}, {"Brand": "INSULIN GLARGINE AND LIXISENATIDE", "DA": "TYPE 2 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "INSULIN GLARGINE U100", "DA": "TYPE 2 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "INSULIN GLARGINE U300", "DA": "TYPE 2 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "TAMSULOSIN", "DA": "BENIGN PROSTATIC HYPERPLASIA (BPH)", "TA": "OTHER GENERAL MEDICINES", "BU": "", "Function": "", "CN": ""}, {"Brand": "INSULIN GLULISINE", "DA": "TYPE 2 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "IVACAFTOR/TEZACAFTOR/ELEXACAFTOR AND IVACAFTOR", "DA": "CYSTIC FIBROSIS", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "LUMACAFTOR AND IVACAFTOR", "DA": "CYSTIC FIBROSIS", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "LIXISENATIDE", "DA": "TYPE 2 DIABETES", "TA": "Diabetes", "BU": "", "Function": "", "CN": ""}, {"Brand": "DUPILUMAB", "DA": "CHRONIC OBSTRUCTIVE PULMONARY DISEASE (COPD)", "TA": "Respiratory", "BU": "", "Function": "", "CN": ""}, {"Brand": "DTACP-HIB-IPV (PENTA ACELLULAR) - PRIMARY SERIES", "DA": "DTACP-HIB-IPV (PENTA ACELLULAR) - PRIMARY SERIES", "TA": "VACCINES", "BU": "", "Function": "", "CN": ""}, {"Brand": "AFLIBERCEPT", "DA": "COLORECTAL CANCER", "TA": "Oncology", "BU": "", "Function": "", "CN": ""}, {"Brand": "ALIROCUMAB", "DA": "DYSLIPIDEMIA", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "EZETIMIBE AND ROSUVASTATIN", "DA": "DYSLIPIDEMIA", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "DUPILUMAB", "DA": "CHRONIC RHINOSINUSITIS WITH NASAL POLYPS (CRSwNP)", "TA": "Rhinology", "BU": "", "Function": "", "CN": ""}, {"Brand": "ROSUVASTATIN", "DA": "DYSLIPIDEMIA", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "DUPILUMAB", "DA": "EOSINOPHILIC ESOPHAGITIS (EoE)", "TA": "Gastroenterology", "BU": "", "Function": "", "CN": ""}, {"Brand": "AGALSIDASE BETA", "DA": "FABRY", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "ELIGLUSTAT", "DA": "GAUCHER", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "IMIGLUCERASE", "DA": "GAUCHER", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "LENOGRASTIM", "DA": "NEUTROPHIL DEFICIENCY", "TA": "Oncology", "BU": "", "Function": "", "CN": ""}, {"Brand": "PENTOXIFYLLINE", "DA": "PERIPHERAL ARTERIAL DISEASE", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "FITUSIRAN", "DA": "HEMOPHILIA A", "TA": "HEMATOLOGY", "BU": "", "Function": "", "CN": ""}, {"Brand": "AMLODIPINE AND IRBESARTAN", "DA": "HYPERTENSION", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "CABAZITAXEL", "DA": "PROSTATE CANCER", "TA": "Oncology", "BU": "", "Function": "", "CN": ""}, {"Brand": "DUPILUMAB", "DA": "PRURIGO NODULARIS", "TA": "Dermatology", "BU": "", "Function": "", "CN": ""}, {"Brand": "IRBESARTAN", "DA": "HYPERTENSION", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "LOSARTAN", "DA": "HYPERTENSION", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "ALGLUCOSIDASE ALFA", "DA": "POMPE", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "AVALGLUCOSIDASE ALFA", "DA": "POMPE", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "TELMISARTAN", "DA": "HYPERTENSION", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "SARILUMAB", "DA": "RHEUMATOID ARTHRITIS", "TA": "Rheumatology", "BU": "", "Function": "", "CN": ""}, {"Brand": "CLOFARABINE", "DA": "LEUKEMIA/LYMPHOMA", "TA": "Oncology", "BU": "", "Function": "", "CN": ""}, {"Brand": "THYROTROPHINE ALFA", "DA": "THYROID CANCER", "TA": "Oncology", "BU": "", "Function": "", "CN": ""}, {"Brand": "VANDETANIB", "DA": "THYROID CANCER", "TA": "Oncology", "BU": "", "Function": "", "CN": ""}, {"Brand": "MENINGO CONJUGATE ACWY", "DA": "MENINGOCOCCAL DISEASE", "TA": "VACCINES", "BU": "", "Function": "", "CN": ""}, {"Brand": "Tdap - BOOSTER", "DA": "Tdap - BOOSTER", "TA": "VACCINES", "BU": "", "Function": "", "CN": ""}, {"Brand": "ISATUXIMAB", "DA": "MULTIPLE MYELOMA", "TA": "HEMATOLOGY", "BU": "", "Function": "", "CN": ""}, {"Brand": "CLOPIDOGREL", "DA": "THROMBOSIS", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "ENOXAPARIN", "DA": "THROMBOSIS", "TA": "Cardiology", "BU": "", "Function": "", "CN": ""}, {"Brand": "LARONIDASE", "DA": "MUCOPOLYSACCHARIDOSIS (MPS)", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}, {"Brand": "ALEMTUZUMAB", "DA": "MULTIPLE SCLEROSIS", "TA": "Neurology", "BU": "", "Function": "", "CN": ""}, {"Brand": "PLERIXAFOR", "DA": "autologous HEMATOPOIETIC STEM CELL TRANSPLANTATION (aHSCT)", "TA": "Transplant", "BU": "", "Function": "", "CN": ""}, {"Brand": "TERIFLUNOMIDE", "DA": "MULTIPLE SCLEROSIS", "TA": "Neurology", "BU": "", "Function": "", "CN": ""}, {"Brand": "VALPROIC ACID", "DA": "BIPOLAR DISORDER", "TA": "Neurology", "BU": "", "Function": "", "CN": ""}, {"Brand": "BELUMOSUDIL", "DA": "chronic GRAFT-VERSUS-HOST DISEASE (cGVHD)", "TA": "Transplant", "BU": "", "Function": "", "CN": ""}, {"Brand": "VANZACAFTOR/TEZACAFTOR/DEUTIVACAFTOR", "DA": "CYSTIC FIBROSIS", "TA": "RARE DISEASE", "BU": "", "Function": "", "CN": ""}], "brands": ["ADACEL", "AFLIBERCEPT", "AGALSIDASE BETA", "ALDURAZYME", "ALEMTUZUMAB", "ALGLUCOSIDASE ALFA", "ALIROCUMAB", "ALYFTREK", "AMARYL", "AMLODIPINE AND IRBESARTAN", "APIDRA", "APROVASC", "APROVEL", "AUBAGIO", "AVALGLUCOSIDASE ALFA", "BELUMOSUDIL", "CABAZITAXEL", "CABLIVI", "CAPLACIZUMAB-YHDP", "CAPRELSA", "CEMIPLIMAB", "CERDELGA", "CEREZYME", "CLEXANE", "CLOFARABINE", "CLOPIDOGREL", "DEPAKINE", "DTACP-HIB-IPV (PENTA ACELLULAR) - PRIMARY SERIES", "DUPILUMAB", "DUPIXENT", "ELIGLUSTAT", "ENOXAPARIN", "EVOLTRA", "EZETIMIBE AND ROSUVASTATIN", "FABRAZYME", "FINASTERIDE", "FITUSIRAN", "FOKUSIN", "First infusion Xenpozyme", "GLIMEPIRIDE", "GRANOCYTE", "IMIGLUCERASE", "INSULIN GLARGINE AND LIXISENATIDE", "INSULIN GLARGINE U100", "INSULIN GLARGINE U300", "INSULIN GLULISINE", "IRBESARTAN", "ISATUXIMAB", "IVACAFTOR/TEZACAFTOR/ELEXACAFTOR AND IVACAFTOR", "JEVTANA", "KEVZARA", "LANTUS", "LARONIDASE", "LEMTRADA", "LENOGRASTIM", "LEVOFLOXACIN", "LIBTAYO", "LIXISENATIDE", "LOSARTAN", "LOZAP", "LOZAP AM", "LOZAP PLUS", "LUMACAFTOR AND IVACAFTOR", "LYXUMIA", "MENACTRA", "MENINGO CONJUGATE ACWY", "MENQUADFI", "MOZOBIL", "MYOZYME", "NEXVIAZYME", "OLIPUDASE ALFA", "ORKAMBI", "Old products", "PENESTER", "PENTAXIM", "PENTOXIFYLLINE", "PLAVIX", "PLERIXAFOR", "PRALUENT", "REZTIREG", "ROSUCARD", "ROSUVASTATIN", "SARCLISA", "SARILUMAB", "SOLIQUA", "Sanofi", "T1D Autoimmune", "TAMSULOSIN", "TAVANIC", "TELMISARTAN", "TELZAP", "TELZAP AM", "TELZAP Plus", "TEPLIZUMAB", "TERIFLUNOMIDE", "THYROGEN", "THYROTROPHINE ALFA", "TOUJEO", "TRENTAL", "TRIKAFTA", "Tdap - BOOSTER", "VALPROIC ACID", "VANDETANIB", "VANZACAFTOR/TEZACAFTOR/DEUTIVACAFTOR", "XENPOZYME", "ZALTRAP", "ZENON"], "unique_values": {"Brand": ["ADACEL", "AFLIBERCEPT", "AGALSIDASE BETA", "ALDURAZYME", "ALEMTUZUMAB", "ALGLUCOSIDASE ALFA", "ALIROCUMAB", "ALYFTREK", "AMARYL", "AMLODIPINE AND IRBESARTAN", "APIDRA", "APROVASC", "APROVEL", "AUBAGIO", "AVALGLUCOSIDASE ALFA", "BELUMOSUDIL", "CABAZITAXEL", "CABLIVI", "CAPLACIZUMAB-YHDP", "CAPRELSA", "CEMIPLIMAB", "CERDELGA", "CEREZYME", "CLEXANE", "CLOFARABINE", "CLOPIDOGREL", "DEPAKINE", "DTACP-HIB-IPV (PENTA ACELLULAR) - PRIMARY SERIES", "DUPILUMAB", "DUPIXENT", "ELIGLUSTAT", "ENOXAPARIN", "EVOLTRA", "EZETIMIBE AND ROSUVASTATIN", "FABRAZYME", "FINASTERIDE", "FITUSIRAN", "FOKUSIN", "First infusion Xenpozyme", "GLIMEPIRIDE", "GRANOCYTE", "IMIGLUCERASE", "INSULIN GLARGINE AND LIXISENATIDE", "INSULIN GLARGINE U100", "INSULIN GLARGINE U300", "INSULIN GLULISINE", "IRBESARTAN", "ISATUXIMAB", "IVACAFTOR/TEZACAFTOR/ELEXACAFTOR AND IVACAFTOR", "JEVTANA", "KEVZARA", "LANTUS", "LARONIDASE", "LEMTRADA", "LENOGRASTIM", "LEVOFLOXACIN", "LIBTAYO", "LIXISENATIDE", "LOSARTAN", "LOZAP", "LOZAP AM", "LOZAP PLUS", "LUMACAFTOR AND IVACAFTOR", "LYXUMIA", "MENACTRA", "MENINGO CONJUGATE ACWY", "MENQUADFI", "MOZOBIL", "MYOZYME", "NEXVIAZYME", "OLIPUDASE ALFA", "ORKAMBI", "Old products", "PENESTER", "PENTAXIM", "PENTOXIFYLLINE", "PLAVIX", "PLERIXAFOR", "PRALUENT", "REZTIREG", "ROSUCARD", "ROSUVASTATIN", "SARCLISA", "SARILUMAB", "SOLIQUA", "Sanofi", "T1D Autoimmune", "TAMSULOSIN", "TAVANIC", "TELMISARTAN", "TELZAP", "TELZAP AM", "TELZAP Plus", "TEPLIZUMAB", "TERIFLUNOMIDE", "THYROGEN", "THYROTROPHINE ALFA", "TOUJEO", "TRENTAL", "TRIKAFTA", "Tdap - BOOSTER", "VALPROIC ACID", "VANDETANIB", "VANZACAFTOR/TEZACAFTOR/DEUTIVACAFTOR", "XENPOZYME", "ZALTRAP", "ZENON"], "DA": ["ACID SPHINGOMYLENASE DEFICIENCY (NIEMANN-PICK)", "ANTI-INFECTIVES", "ASTHMA", "ATOPIC DERMATITIS", "BENIGN PROSTATIC HYPERPLASIA (BPH)", "BIPOLAR DISORDER", "CERVICAL CANCER", "CHRONIC OBSTRUCTIVE PULMONARY DISEASE (COPD)", "CHRONIC RHINOSINUSITIS WITH NASAL POLYPS (CRSwNP)", "COLORECTAL CANCER", "CYSTIC FIBROSIS", "DTACP-HIB-IPV (PENTA ACELLULAR) - PRIMARY SERIES", "DYSLIPIDEMIA", "EOSINOPHILIC ESOPHAGITIS (EoE)", "FABRY", "GAUCHER", "HEMOPHILIA A", "HYPERTENSION", "LEUKEMIA/LYMPHOMA", "MENINGOCOCCAL DISEASE", "MUCOPOLYSACCHARIDOSIS (MPS)", "MULTIPLE MYELOMA", "MULTIPLE SCLEROSIS", "NEUTROPHIL DEFICIENCY", "PERIPHERAL ARTERIAL DISEASE", "POMPE", "PROSTATE CANCER", "PRURIGO NODULARIS", "RHEUMATOID ARTHRITIS", "THROMBOSIS", "THYROID CANCER", "TOPICS", "TYPE 1 DIABETES", "TYPE 2 DIABETES", "Tdap - BOOSTER", "VACCINES", "acquired THROMBOTIC THROMBOCYTOPENIC PURPURA (aTTP/iTTP)", "autologous HEMATOPOIETIC STEM CELL TRANSPLANTATION (aHSCT)", "chronic GRAFT-VERSUS-HOST DISEASE (cGVHD)"], "TA": ["Cardiology", "Dermatology", "Diabetes", "Endocrinology", "Gastroenterology", "HEMATOLOGY", "Neurology", "OTHER GENERAL MEDICINES", "Oncology", "Psychiatry", "RARE BLOOD DISORDERS", "RARE DISEASE", "Respiratory", "Rheumatology", "Rhinology", "Transplant", "VACCINES"], "BU": ["GENERAL MEDICINES", "SPECIALTY CARE", "VACCINES"], "Function": ["Commercial", "Medical"], "CN": ["journey", "promo"]}};
+
+    const CLIENT_ID = "tuedutmcfrbrbaet7gkcgw6xrs2hm3f4";
+    const PRIVACY_CONTENT_BLOCK_ID = "1649";
+    const CXQ_BASE_URL = "https://docsfera.ru/voting/cxq/";
+    const UNSUBSCRIBE_URL = "https://docsfera.ru/personal/unsubscribe/";
+
+    let selectedFile = null;
+    let uploadedHtmlSnippet = "";
+    let convertedHtml = null;
+    let outputFilename = "email_SFMC.html";
+
+    const els = {
+      toast: document.getElementById("toast"),
+      uploadZone: document.getElementById("upload-zone"),
+      fileInput: document.getElementById("file-input"),
+      fileChip: document.getElementById("file-chip"),
+      fileName: document.getElementById("file-name"),
+      fileMeta: document.getElementById("file-meta"),
+      brandSearch: document.getElementById("brand_search"),
+      brandSelect: document.getElementById("cxq_brand"),
+      validation: document.getElementById("validation"),
+      changes: document.getElementById("changes"),
+      warnings: document.getElementById("warnings"),
+      preview: document.getElementById("preview"),
+      downloadBtn: document.getElementById("download-btn"),
+      convertBtn: document.getElementById("convert-btn"),
+      statusBanner: document.getElementById("status-banner"),
+      statusIcon: document.getElementById("status-icon"),
+      statusTitle: document.getElementById("status-title"),
+      statusText: document.getElementById("status-text"),
+    };
+
+    function toast(text, type = "info") {
+      els.toast.textContent = text;
+      els.toast.className = `toast ${type} show`;
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => els.toast.classList.remove("show"), 3200);
+    }
+
+    function setStep(n) {
+      [1, 2, 3].forEach((i) => {
+        const el = document.getElementById(`step-indicator-${i}`);
+        el.classList.remove("active", "done");
+        if (i < n) el.classList.add("done");
+        if (i === n) el.classList.add("active");
+      });
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.tab === name));
+      document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.toggle("active", panel.id === `panel-${name}`));
+    }
+
+    function getParams() {
+      return {
+        data_extension: document.getElementById("data_extension").value.trim(),
+        personalization_mode: document.getElementById("personalization_mode").value,
+        utm_campaign: document.getElementById("utm_campaign").value.trim(),
+        cxq_brand: document.getElementById("cxq_brand").value.trim(),
+        cxq_da: document.getElementById("cxq_da").value.trim(),
+        cxq_ta: document.getElementById("cxq_ta").value.trim(),
+        cxq_bu: document.getElementById("cxq_bu").value.trim(),
+        cxq_function: document.getElementById("cxq_function").value.trim(),
+        cxq_cn: document.getElementById("cxq_cn").value.trim(),
+      };
+    }
+
+    function block1(p) {
+      return `%%[\nset @subscriberKey = _subscriberkey\nset @AkamaiID = Lookup("${p.data_extension}","Akamai_uuid","Subscriberkey", @subscriberKey)\nset @OneKeyID = Lookup("${p.data_extension}","WRUM","Subscriberkey", @subscriberKey)\nset @utms = concat('&utm_hcpid=', @OneKeyID, '&actid=', @AkamaiID, '&Q_Language=RU')\n]%%`;
+    }
+
+    function block2() {
+      return `%%[ SET @utm_campaign = __AdditionalEmailAttribute1 ]%%\n%%[ SET @utm_source = __AdditionalEmailAttribute2 ]%%\n%%[set @SubscriberKey = _subscriberkey]%%\n%%[set @EventDate = GetSendTime()]%%\n%%[set @View_Link = view_email_url]%%\n%%[set @Email_Id = _emailid]%%\n%%[set @Email_Name = emailname_]%%\n%%[set @Email_Log = emailaddr]%%\n%%[set @rows = LookupRows("ENT.PROD_RUS_Metadata","CampaignCode",@utm_campaign)\nset @rowCount = rowcount(@rows)\nif @rowCount == 0 then\nRaiseError('This campaign Code is not listed', false)\nendif]%%\n%%[set @rows = LookupRows("ENT.PROD_RUS_Metadata","ExposureCode", @utm_source)\nset @rowCount = rowcount(@rows)\nif @rowCount == 0 then\nRaiseError('This exposure Code is not listed', false)\nendif]%%\n%%[if empty(__AdditionalEmailAttribute2) OR empty(__AdditionalEmailAttribute1) then\nRaiseError('Ops, looks like you missed Campaign code or Exposure Code!', false)\nelse\nset @combinationCount = LookupOrderedRows("ENT.PROD_RUS_Metadata",0,"CampaignCode asc","CampaignCode",@utm_campaign,"ExposureCode", @utm_source)\nset @countOfCombo=rowcount(@combinationCount)\nif @countOfCombo ==0 then\nRaiseError('The combination of campaign code and exposure code entered is incorrect', false)\nendif\nendif]%%\n      <custom name="opencounter" type="tracking">`;
+    }
+
+    function block3Link() {
+      return '<a href="%%view_email_url%%" style="color:#b9b9b9; text-decoration:underline;" target="_blank">сюда</a>';
+    }
+
+    function extractPrivacyUrl(html) {
+      const links = html.match(/https?:\/\/docsfera\.ru\/[^\s"'<>]+/gi) || [];
+      const candidates = [];
+      links.forEach((url) => {
+        const lower = url.toLowerCase();
+        if (lower.includes("unsubscribe") || lower.includes("voting/cxq") || lower.includes("/personal/unsubscribe")) return;
+        let score = 0;
+        if (/(lectures|lecture|policy|politic|privacy|confiden)/i.test(lower)) score += 2;
+        candidates.push({ score, url: url.replace(/\/$/, "") });
+      });
+      candidates.sort((a, b) => b.score - a.score || b.url.length - a.url.length);
+      return candidates[0]?.url || "";
+    }
+
+    const DOCSFERA_ANCHOR_RE = /(<a\b[^>]*\bhref=)(["'])(https?:\/\/docsfera\.ru\/[^"']+)\2([^>]*>)([\s\S]*?<\/a>)/gi;
+
+    function shouldApplyContentDeeplink(url) {
+      const normalized = url.replace(/\/$/, "");
+      const lower = normalized.toLowerCase();
+      if (lower === "https://docsfera.ru" || lower === "http://docsfera.ru") return false;
+      if (/(voting\/cxq|personal\/unsubscribe|unsubscribe)/i.test(lower)) return false;
+      if (lower.includes("/upload/") || lower.endsWith(".pdf")) return false;
+      return true;
+    }
+
+    function replaceViewInBrowser(html) {
+      const fallback = '<a href="%%view_email_url%%" target="_blank">сюда</a>';
+      let changed = false;
+
+      const accessibilityUpdated = html.replace(/\bhref=(["'])\$\{Message\.AccessibilityLink\}\1/gi, 'href="%%view_email_url%%"');
+      if (accessibilityUpdated !== html) return { html: accessibilityUpdated, changed: true };
+
+      const viewSection = /(отображается\s+некорректно[\s\S]{0,320}?)(<a\b[^>]*>[\s\S]*?сюда[\s\S]*?<\/a>)/i;
+      const sectionUpdated = html.replace(viewSection, (full, prefix, anchor) => {
+        if (/%%view_email_url%%/i.test(anchor)) return full;
+        changed = true;
+        return prefix + anchor.replace(/\bhref=(["'])[^"']*\1/i, 'href="%%view_email_url%%"');
+      });
+      if (changed) return { html: sectionUpdated, changed: true };
+
+      const updated = html.replace(/<a\b[^>]*>[\s\S]*?сюда[\s\S]*?<\/a>/i, (anchor) => {
+        if (/%%view_email_url%%/i.test(anchor)) return anchor;
+        changed = true;
+        return anchor.replace(/\bhref=(["'])[^"']*\1/i, 'href="%%view_email_url%%"');
+      });
+      if (changed) return { html: updated, changed: true };
+
+      let result = html;
+      const patterns = [
+        /(Если[^<]{0,180}отображается\s+некорректно[^<]*?)(?:нажмите\s*)?(?:<a\b[^>]*>[^<]*<\/a>|сюда|здесь)/i,
+        /(Если\s+(?:данное\s+)?письмо[^<]{0,180}отображается\s+некорректно[^<]*?)(<a\b[^>]*>[^<]*<\/a>|сюда|здесь)/i,
+      ];
+      for (const pattern of patterns) {
+        if (pattern.test(result)) {
+          return { html: result.replace(pattern, `$1${fallback}`), changed: true };
+        }
+      }
+      if (!/%%view_email_url%%/i.test(result) && /отображается\s+некорректно/i.test(result)) {
+        const next = result.replace(
+          /(отображается\s+некорректно[^<]{0,120}?)(?:нажмите\s*)?(?:<a\b[^>]*>[^<]*<\/a>|сюда|здесь)/i,
+          `$1${fallback}`
+        );
+        if (next !== result) return { html: next, changed: true };
+      }
+      return { html, changed: false };
+    }
+
+    function block4Personalization(p) {
+      return p.personalization_mode === "manual"
+        ? "Здравствуйте, %%=v(@title)=%% %%=v(FirstName)=%% %%=v(Attribute1)=%%!"
+        : "Здравствуйте, %%=v(@title)=%% %%=v(FirstName)=%% %%=v(MiddleName)=%%!";
+    }
+
+    function mapRecipientField(fieldName, p) {
+      const middle = p.personalization_mode === "manual" ? "Attribute1" : "MiddleName";
+      const key = fieldName.toLowerCase().replace(/[\s_\-]/g, "");
+      if (["title", "salutation", "obraschenie", "appeal"].includes(key)) return "%%=v(@title)=%%";
+      if (["firstname", "first", "name", "imya", "getname", "fullname"].includes(key)) return "%%=v(FirstName)=%%";
+      if (["middlename", "middle", "otchestvo", "patronymic", "secondname"].includes(key)) return `%%=v(${middle})=%%`;
+      if (["lastname", "last", "surname", "familiya", "familyname"].includes(key)) return "%%=v(LastName)=%%";
+      return `%%=v(${middle})=%%`;
+    }
+
+    function decodeHtml(value) {
+      const el = document.createElement("textarea");
+      el.innerHTML = value;
+      return el.value;
+    }
+
+    function personalizationFieldMap(p) {
+      const middle = p.personalization_mode === "manual" ? "Attribute1" : "MiddleName";
+      return [
+        [/<span>\s*\$\{\s*Recipient\s*\.\s*Title\s*\}\s*<\/span>/gi, "%%=v(@title)=%%"],
+        [/\$\{\s*Recipient\s*\.\s*Title\s*\}/gi, "%%=v(@title)=%%"],
+        [/\$\{\s*Recipient\s*\.\s*FirstName\s*\}/gi, "%%=v(FirstName)=%%"],
+        [/\$\{\s*Recipient\s*\.\s*MiddleName\s*\}/gi, `%%=v(${middle})=%%`],
+        [/\$\{\s*Recipient\s*\.\s*LastName\s*\}/gi, "%%=v(LastName)=%%"],
+        [/\$\{\s*Recipient\s*\.\s*(\w+)\s*\}/gi, (match, field) => mapRecipientField(field, p)],
+        [/%Recipient\.Title%/gi, "%%=v(@title)=%%"],
+        [/%Recipient\.FirstName%/gi, "%%=v(FirstName)=%%"],
+        [/%Recipient\.MiddleName%/gi, `%%=v(${middle})=%%`],
+        [/%Recipient\.LastName%/gi, "%%=v(LastName)=%%"],
+        [/(?<![(\w])@Title\b/gi, "%%=v(@title)=%%"],
+        [/(?<![(\w])@FirstName\b/gi, "%%=v(FirstName)=%%"],
+        [/(?<![(\w])@MiddleName\b/gi, `%%=v(${middle})=%%`],
+        [/(?<![(\w])@LastName\b/gi, "%%=v(LastName)=%%"],
+      ];
+    }
+
+    function wrapAnchorWithDeeplink(match, url) {
+      if (/RedirectTo\(@UnsubscribeUrl\)/i.test(match[0])) return match[0];
+      const tag = `${match[1]}${match[2]}%%=RedirectTo(@UnsubscribeUrl)=%%${match[2]}${match[4]}${match[5]}`;
+      return `${block4Privacy(url.replace(/\/$/, ""))}\n${tag}`;
+    }
+
+    function applyAllDocsferaDeeplinks(html) {
+      let result = html;
+      let count = 0;
+      if (result.includes("Start--Privacy Link goes here")) {
+        const urls = findDocsferaDeeplinkUrls(result);
+        if (urls.length) {
+          const updated = result.replace(/<!-----Start--Privacy Link goes here[\s\S]*?<!-----END---Privacy Link goes here ---->/i, block4Privacy(urls[0]));
+          if (updated !== result) {
+            result = updated;
+            count += 1;
+          }
+        }
+      }
+      const re = new RegExp(DOCSFERA_ANCHOR_RE.source, "gi");
+      const matches = [...result.matchAll(re)];
+      for (let i = matches.length - 1; i >= 0; i -= 1) {
+        const match = matches[i];
+        const url = match[3].replace(/\/$/, "");
+        if (!shouldApplyContentDeeplink(url) || /RedirectTo\(@UnsubscribeUrl\)/i.test(match[0])) continue;
+        const replacement = wrapAnchorWithDeeplink(match, url);
+        result = result.slice(0, match.index) + replacement + result.slice(match.index + match[0].length);
+        count += 1;
+      }
+      return { html: result, count };
+    }
+
+    function findDocsferaDeeplinkUrls(html) {
+      const urls = [];
+      const seen = new Set();
+      const re = new RegExp(DOCSFERA_ANCHOR_RE.source, "gi");
+      for (const match of html.matchAll(re)) {
+        const url = match[3].replace(/\/$/, "");
+        if (!shouldApplyContentDeeplink(url) || seen.has(url)) continue;
+        seen.add(url);
+        urls.push(url);
+      }
+      return urls;
+    }
+
+    function block4Privacy(url) {
+      return `<!-----Start--Privacy Link goes here---- >\n%%[\nset @RedirectUri='${url}'\nset @ClientId='${CLIENT_ID}'\nset @Website='https://docsfera.ru/'\n]%%\n%%=ContentBlockbyId("${PRIVACY_CONTENT_BLOCK_ID}")=%%\n<!-----END---Privacy Link goes here ---->`;
+    }
+
+    const QUALTRICS_CXQ_HOST_RE = /(?:sanofidigital\.[^/]+|[^/]*qualtrics\.com)/i;
+
+    function cxqQueryParam(url, name) {
+      const match = url.match(new RegExp(`[?&]${name}=([^&"']+)`, "i"));
+      return match ? match[1] : "";
+    }
+
+    function mappingRowForBrand(brand) {
+      if (!brand) return {};
+      const target = brand.trim().toUpperCase();
+      return CXQ.rows.find((r) => String(r.Brand || "").trim().toUpperCase() === target) || {};
+    }
+
+    function cxqFormInput(p) {
+      return !!(p.cxq_brand || p.cxq_da || p.cxq_ta || p.cxq_bu || p.cxq_cn || p.cxq_function);
+    }
+
+    function resolveCxqFields(p) {
+      const row = mappingRowForBrand(p.cxq_brand);
+      const pick = (param, key) => (param || row[key] || "").trim();
+      return {
+        brand: pick(p.cxq_brand, "Brand"),
+        da: pick(p.cxq_da, "DA"),
+        ta: pick(p.cxq_ta, "TA"),
+        bu: pick(p.cxq_bu, "BU"),
+        function: pick(p.cxq_function, "Function"),
+        cn: pick(p.cxq_cn, "CN"),
+      };
+    }
+
+    function docsferaCxqDefaults(fields) {
+      return {
+        brand: fields.brand,
+        da: fields.da,
+        ta: fields.ta,
+        bu: fields.bu || "GENERAL_MEDICINES",
+        function: fields.function || "Commercial",
+        cn: fields.cn || "journey",
+      };
+    }
+
+    function cxqToken(value) {
+      return String(value).replace(/ /g, "_");
+    }
+
+    function appendUtmCampaign(url, utmCampaign) {
+      if (!utmCampaign || /utm_campaign=/i.test(url)) return url;
+      return `${url}${url.includes("?") ? "&" : "?"}utm_campaign=${encodeURIComponent(utmCampaign)}`;
+    }
+
+    function buildQualtricsCxqUrl(p, rating, originalUrl = "") {
+      if (!originalUrl) return "";
+      const decoded = decodeHtml(originalUrl);
+      const base = decoded.split("?")[0];
+      const country = cxqQueryParam(decoded, "Country") || "RU";
+      const qlang = cxqQueryParam(decoded, "Q_Language") || "RU";
+      if (!cxqFormInput(p)) return decoded;
+      const fields = docsferaCxqDefaults(resolveCxqFields(p));
+      const ta = cxqToken(fields.ta);
+      const bu = cxqToken(fields.bu);
+      const cn = fields.cn;
+      return `${base}?Country=${country}&Q_Language=${qlang}&TA=${ta}&BU=${bu}&CN=${cn}&R=${rating}`;
+    }
+
+    function buildCxqUrl(p, rating, originalUrl = "") {
+      if (originalUrl) {
+        const decoded = decodeHtml(originalUrl);
+        const originalCn = cxqQueryParam(decoded, "CN");
+        const utmAdd = p.utm_campaign && (p.cxq_cn || originalCn || "").toLowerCase() !== "promo" && !/utm_campaign=/i.test(decoded);
+        if (!cxqFormInput(p)) {
+          return utmAdd ? appendUtmCampaign(decoded, p.utm_campaign) : decoded;
+        }
+        const fields = docsferaCxqDefaults(resolveCxqFields(p));
+        const brand = cxqToken(fields.brand);
+        const da = cxqToken(fields.da);
+        const ta = cxqToken(fields.ta);
+        const bu = cxqToken(fields.bu);
+        const fn = cxqToken(fields.function);
+        const cn = fields.cn;
+        const franchise = brand || da;
+        let url = `${CXQ_BASE_URL}?Channel=email&R=${rating}&Brand=${brand}&DA=${da}&TA=${ta}&Franchise=${franchise}&BU=${bu}&Function=${fn}&CN=${cn}`;
+        if (cn.toLowerCase() !== "promo" && p.utm_campaign) {
+          url += `&utm_campaign=${encodeURIComponent(p.utm_campaign)}`;
+        }
+        return url;
+      }
+
+      if (!cxqFormInput(p)) return "";
+      const fields = docsferaCxqDefaults(resolveCxqFields(p));
+      if (!fields.brand || !fields.da || !fields.ta) return "";
+      const brand = cxqToken(fields.brand);
+      const da = cxqToken(fields.da);
+      const ta = cxqToken(fields.ta);
+      const bu = cxqToken(fields.bu);
+      const fn = cxqToken(fields.function);
+      const cn = fields.cn;
+      const franchise = brand || da;
+      let url = `${CXQ_BASE_URL}?Channel=email&R=${rating}&Brand=${brand}&DA=${da}&TA=${ta}&Franchise=${franchise}&BU=${bu}&Function=${fn}&CN=${encodeURIComponent(cn)}`;
+      if (cn.toLowerCase() !== "promo" && p.utm_campaign) {
+        url += `&utm_campaign=${encodeURIComponent(p.utm_campaign)}`;
+      }
+      return url;
+    }
+
+    function block5Cxq(p) {
+      return "<!-- CXQ block -->\n" + Array.from({ length: 7 }, (_, i) => {
+        const r = i + 1;
+        return `<a href="${buildCxqUrl(p, r)}" target="_blank" style="text-decoration:none;">${r}</a>`;
+      }).join("\n");
+    }
+
+    function block6UnsubscribeScript() {
+      return `%%[\nset @RedirectUri='${UNSUBSCRIBE_URL}'\nset @ClientId='${CLIENT_ID}'\nset @Website='https://docsfera.ru'\n]%%\n%%=ContentBlockbyId("${PRIVACY_CONTENT_BLOCK_ID}")=%%`;
+    }
+
+    function ensureUnsubscribeAlias(anchor) {
+      if (/alias="unsubscribe"/i.test(anchor)) return anchor;
+      if (/\balias\s*=/i.test(anchor)) {
+        return anchor.replace(/\balias=(["'])[^"']*\1/i, 'alias="unsubscribe"');
+      }
+      return anchor.replace(/^<a\b/i, '<a alias="unsubscribe"');
+    }
+
+    function wrapUnsubscribeAnchor(anchor) {
+      if (/RedirectTo\(@UnsubscribeUrl\)/i.test(anchor)) return ensureUnsubscribeAlias(anchor);
+      const wrapped = ensureUnsubscribeAlias(anchor.replace(/\bhref=(["'])[^"']*\1/i, 'href="%%=RedirectTo(@UnsubscribeUrl)=%%"'));
+      return `${block6UnsubscribeScript()}\n${wrapped}`;
+    }
+
+    function replaceUnsubscribe(html) {
+      const re = /(<a\b[^>]*>)([\s\S]*?<\/a>)/gi;
+      let result = html;
+      let count = 0;
+      const matches = [...result.matchAll(re)];
+      for (let i = matches.length - 1; i >= 0; i -= 1) {
+        const match = matches[i];
+        const anchor = match[0];
+        const hrefMatch = anchor.match(/\bhref=(["'])([^"']*)\1/i);
+        const href = hrefMatch ? hrefMatch[2].toLowerCase() : "";
+        const inner = match[2].toLowerCase();
+        const isUnsub = /unsubscribe|otpis/.test(href) || /отпис/.test(inner);
+        if (!isUnsub) continue;
+        if (/RedirectTo\(@UnsubscribeUrl\)/i.test(anchor)) {
+          const window = result.slice(Math.max(0, match.index - 800), match.index);
+          if (/ContentBlockbyId/i.test(window)) {
+            const fixed = ensureUnsubscribeAlias(anchor);
+            if (fixed !== anchor) {
+              result = result.slice(0, match.index) + fixed + result.slice(match.index + anchor.length);
+              count += 1;
+            }
+            continue;
+          }
+        }
+        const replacement = wrapUnsubscribeAnchor(anchor);
+        if (replacement !== anchor) {
+          result = result.slice(0, match.index) + replacement + result.slice(match.index + anchor.length);
+          count += 1;
+        }
+      }
+      if (count) return { html: result, changed: true };
+      const fallback = `${block6UnsubscribeScript()}\n<a alias="unsubscribe" href="%%=RedirectTo(@UnsubscribeUrl)=%%">сюда.</a>`;
+      if (/<\/body>/i.test(result)) {
+        return { html: result.replace(/<\/body>/i, `${fallback}\n</body>`), changed: true };
+      }
+      return { html: result + `\n${fallback}`, changed: true };
+    }
+
+    function insertBeforeDoctype(html, snippet) {
+      const m = html.match(/(<!DOCTYPE|<html)/i);
+      if (!m) return snippet + "\n" + html;
+      return html.slice(0, m.index) + snippet + "\n" + html.slice(m.index);
+    }
+
+    function insertAfterHead(html, snippet) {
+      const m = html.match(/<\/head>/i);
+      if (!m) return html;
+      const idx = m.index + m[0].length;
+      return html.slice(0, idx) + "\n" + snippet + "\n" + html.slice(idx);
+    }
+
+    const MINDBOX_GENDER_GREETING_RE = /@{\s*if\s+Recipient\.IsMale\s*}\s*Уважаемый\s*@{\s*else\s*}\s*Уважаемая\s*@{\s*end\s+if\s*}\s*\$\{Recipient\.FirstAndMiddleName\}\s*!/gi;
+    const SFMC_GREETING_RE = /Здравствуйте,\s*%%=v\(@title\)=%%\s*%%=v\(FirstName\)=%%\s*%%=v\((?:MiddleName|Attribute1)\)=%%\s*!?/i;
+    const SPLIT_SFMC_GREETING_RE = /(<h2\b[^>]*>\s*<strong\b[^>]*>\s*)Здравствуйте,\s*(<\/strong>\s*<\/h2>\s*)(<h2\b[^>]*>\s*<strong\b[^>]*>\s*)%%=v\(@title\)=%%\s*%%=v\(FirstName\)=%%\s*%%=v\((?:MiddleName|Attribute1)\)=%%\s*(<\/strong>\s*<\/h2>)/gi;
+
+    function mergeSplitSfmcGreeting(html, greeting) {
+      const updated = html.replace(SPLIT_SFMC_GREETING_RE, (m, open, _mid, _open2, close) => `${open}${greeting}${close}`);
+      return { html: updated, changed: updated !== html };
+    }
+
+    function replacePersonalization(html, p) {
+      let result = decodeHtml(html);
+      const greeting = block4Personalization(p);
+      let changed = false;
+
+      const merged = mergeSplitSfmcGreeting(result, greeting);
+      if (merged.changed) {
+        result = merged.html;
+        changed = true;
+      }
+      if (SFMC_GREETING_RE.test(result) && !/@{\s*if\s+Recipient\.IsMale\s*}/i.test(result)) {
+        return { html: changed && result !== html ? result : html, changed: changed && result !== html };
+      }
+
+      const genderUpdated = result.replace(MINDBOX_GENDER_GREETING_RE, greeting);
+      if (genderUpdated !== result) {
+        result = genderUpdated;
+        changed = true;
+      }
+
+      let tokenHits = 0;
+      for (const [pattern, replacement] of personalizationFieldMap(p)) {
+        const updated = typeof replacement === "function"
+          ? result.replace(pattern, replacement)
+          : result.replace(pattern, replacement);
+        if (updated !== result) {
+          tokenHits += 1;
+          result = updated;
+        }
+      }
+      if (tokenHits) changed = true;
+      if (SFMC_GREETING_RE.test(result)) return { html: changed && result !== html ? result : html, changed: changed && result !== html };
+      if (/@{\s*if\s+Recipient\.IsMale\s*}/i.test(result)) return { html, changed: false };
+      if (/\$\{\s*Recipient\s*\./i.test(result)) return { html, changed: false };
+      if (changed && result !== html) return { html: result, changed: true };
+      for (const pattern of [
+        /Здравствуйте(?:(?!!important)[\s\S])*?!(?!\w)/i,
+        /Добрый\s+день(?:(?!!important)[\s\S])*?!(?!\w)/i,
+        /Здравствуйте[\s\S]{0,800}?(?=<\/span>|<\/p>|<\/td>|<\/div>|<\/tr>|<\/h[1-6]|$)/i,
+        /Добрый\s+день[\s\S]{0,800}?(?=<\/span>|<\/p>|<\/td>|<\/div>|<\/tr>|<\/h[1-6]|$)/i,
+        /Уважаем(?:ый|ая)[\s\S]{0,400}?(?=<\/span>|<\/p>|<\/td>|<\/div>|<\/tr>|<\/h[1-6]|$)/i,
+      ]) {
+        const next = result.replace(pattern, greeting);
+        if (next !== result) return { html: next, changed: true };
+      }
+      return { html, changed: false };
+    }
+
+    function extractCxqRating(url) {
+      const decoded = decodeHtml(url);
+      const match = decoded.match(/(?:[?&]|&amp;)R=(\d)/i);
+      if (match) return Math.max(1, Math.min(7, Number(match[1])));
+      return 1;
+    }
+
+    function replaceQualtricsCxqLinks(html, p) {
+      if (!QUALTRICS_CXQ_HOST_RE.test(html) || !/\/jfe\/form\//i.test(html)) return { html, changed: false };
+      let count = 0;
+      const hrefRe = new RegExp(`(<a\\b[^>]*\\bhref\\s*=\\s*)(["'])(https?:\\/\\/(?:sanofidigital\\.[^/]+|[^/]*qualtrics\\.com)\\/jfe\\/form\\/[^"']*)(\\2)`, "gi");
+      let result = html.replace(hrefRe, (match, open, quote, url, close) => {
+        const rating = extractCxqRating(url);
+        const next = buildQualtricsCxqUrl(p, rating, decodeHtml(url));
+        if (next && next !== decodeHtml(url)) count += 1;
+        return `${open}${quote}${next || url}${close}`;
+      });
+      if (!count) {
+        result = result.replace(/https?:\/\/(?:sanofidigital\.[^/]+|[^/]*qualtrics\.com)\/jfe\/form\/[^"'\s<>]+/gi, (url) => {
+          const rating = extractCxqRating(url);
+          const next = buildQualtricsCxqUrl(p, rating, decodeHtml(url));
+          if (next && next !== decodeHtml(url)) count += 1;
+          return next || url;
+        });
+      }
+      return { html: result, changed: count > 0 };
+    }
+
+    function replaceCxqLinks(html, p) {
+      let result = html;
+      let changed = false;
+      if (/docsfera\.ru\/voting\/cxq/i.test(result)) {
+        const docsfera = replaceDocsferaCxqLinks(result, p);
+        result = docsfera.html;
+        changed = changed || docsfera.changed;
+      }
+      if (QUALTRICS_CXQ_HOST_RE.test(result) && /\/jfe\/form\//i.test(result)) {
+        const qualtrics = replaceQualtricsCxqLinks(result, p);
+        result = qualtrics.html;
+        changed = changed || qualtrics.changed;
+      }
+      return { html: result, changed };
+    }
+
+    function replaceDocsferaCxqLinks(html, p) {
+      if (!/docsfera\.ru\/voting\/cxq/i.test(html)) return { html, changed: false };
+      let count = 0;
+      const hrefRe = /(<a\b[^>]*\bhref\s*=\s*)(["'])(https?:\/\/docsfera\.ru\/voting\/cxq\/?\?[^"']*)(\2)/gi;
+      let result = html.replace(hrefRe, (match, open, quote, url, close) => {
+        const rating = extractCxqRating(url);
+        const next = buildCxqUrl(p, rating, decodeHtml(url));
+        if (next !== decodeHtml(url)) count += 1;
+        return `${open}${quote}${next}${close}`;
+      });
+      if (!count) {
+        result = result.replace(/https?:\/\/docsfera\.ru\/voting\/cxq\/?\?[^"'\s<>]+/gi, (url) => {
+          const rating = extractCxqRating(url);
+          const next = buildCxqUrl(p, rating, decodeHtml(url));
+          if (next !== decodeHtml(url)) count += 1;
+          return next;
+        });
+      }
+      return { html: result, changed: count > 0 };
+    }
+
+    function convertMindboxToSfmc(html, p) {
+      const warnings = [];
+      const changes = [];
+      let result = html;
+
+      if (result.includes("set @subscriberKey = _subscriberkey") && result.includes("SET @utm_campaign = __AdditionalEmailAttribute1")) {
+        warnings.push("Файл уже содержит блоки SFMC (№1 и №2). Загрузите исходный Mindbox HTML, а не готовый SFMC.");
+      }
+
+      let before = result;
+      const persResult = replacePersonalization(result, p);
+      result = persResult.html;
+      if (persResult.changed && result !== before) changes.push(`Обновлена персонализация (режим: ${p.personalization_mode})`);
+      else if (!persResult.changed) warnings.push("Блок №4: не найдено приветствие для замены персонализации");
+
+      before = result;
+      const viewResult = replaceViewInBrowser(result);
+      result = viewResult.html;
+      if (viewResult.changed && result !== before) changes.push("Обновлена ссылка «сюда» (блок №3) — href без изменения вёрстки");
+      else if (!viewResult.changed) warnings.push("Блок №3: не найден текст про некорректное отображение");
+
+      result = result.replace(/<!--\s*Mindbox[\s\S]*?-->/gi, "");
+      result = result.replace(/<script[^>]*mindbox[^>]*>[\s\S]*?<\/script>/gi, "");
+      result = result.replace(/\$\{Message\.[^}]+\}/gi, "");
+      result = result.replace(/<custom\s+name="opencounter"\s+type="tracking"\s*\/?>/gi, "");
+
+      if (!result.includes("set @subscriberKey = _subscriberkey")) {
+        result = insertBeforeDoctype(result, block1(p));
+        changes.push(`Добавлен блок №1 (DE: ${p.data_extension})`);
+      }
+
+      if (!result.includes("SET @utm_campaign = __AdditionalEmailAttribute1")) {
+        const updated = insertAfterHead(result, block2());
+        if (updated === result) warnings.push("Не найден </head> — блок №2 не вставлен");
+        else { result = updated; changes.push("Добавлен блок №2 (метаданные кампании и opencounter)"); }
+      }
+
+      const deeplinkResult = applyAllDocsferaDeeplinks(result);
+      result = deeplinkResult.html;
+      if (deeplinkResult.count) {
+        changes.push(`Добавлен deeplink ContentBlock 1649 к ${deeplinkResult.count} ссылкам docsfera.ru (разметка сохранена)`);
+      } else {
+        warnings.push("Блок №4 (deeplink): ссылки docsfera.ru для обёртки не найдены");
+      }
+
+      const hasCxq = /docsfera\.ru\/voting\/cxq/i.test(result) || (QUALTRICS_CXQ_HOST_RE.test(result) && /\/jfe\/form\//i.test(result));
+      if (hasCxq) {
+        const usesDocsfera = /docsfera\.ru\/voting\/cxq/i.test(result);
+        if (usesDocsfera) {
+          const cnValues = [...result.matchAll(/[?&]CN=([^"'&\s<>]+)/gi)].map((m) => m[1]);
+          const needsUtm = cnValues.some((v) => v.toLowerCase() !== "promo" && v !== "");
+          if (needsUtm && !p.utm_campaign && !/utm_campaign=/i.test(result)) {
+            warnings.push(
+              "Блок №5: в docsfera CXQ может понадобиться utm_campaign (CN не promo). " +
+              "Заполните utm_campaign, если нужно переопределить ссылки."
+            );
+          }
+        }
+        before = result;
+        const cxqResult = replaceCxqLinks(result, p);
+        result = cxqResult.html;
+        if (cxqResult.changed && result !== before) {
+          changes.push("Обновлены href в CXQ-ссылках (блок №5) — вёрстка сохранена");
+        } else if ([p.cxq_brand, p.cxq_da, p.cxq_ta, p.cxq_bu, p.cxq_cn, p.cxq_function, p.utm_campaign].some(Boolean)) {
+          warnings.push("Блок №5: CXQ-ссылки не изменились — проверьте параметры формы");
+        }
+      }
+
+      const unsubResult = replaceUnsubscribe(result);
+      result = unsubResult.html;
+      if (unsubResult.changed) changes.push("Обновлен блок отписки (блок №6) — разметка ссылки сохранена");
+
+      if (p.data_extension !== "Akamai_profiles_consents_bounced") {
+        warnings.push(`Нестандартный DE: ${p.data_extension} — проверьте блок №1`);
+      }
+
+      return { html: result, warnings, changes };
+    }
+
+    function validateSfmcHtml(html) {
+      const issues = [];
+      const add = (block, severity, message, hint = "", snippet = "") => issues.push({ block, severity, message, hint, snippet });
+      const req = (block, markers) => {
+        const missing = markers.filter((m) => !html.includes(m));
+        if (missing.length) add(block, "error", `Отсутствуют элементы: ${missing.slice(0, 3).join(", ")}`, `Проверьте ${block}`);
+      };
+
+      req("Блок №1", ["set @subscriberKey = _subscriberkey", "set @AkamaiID = Lookup"]);
+      req("Блок №2", ["SET @utm_campaign = __AdditionalEmailAttribute1", "SET @utm_source = __AdditionalEmailAttribute2", '<custom name="opencounter" type="tracking">']);
+      req("Блок №3", ['href="%%view_email_url%%"', ">сюда</a>"]);
+      req("Блок №4", ["%%=v(@title)=%%", "%%=v(FirstName)=%%"]);
+      req("Блок №6", ["docsfera.ru/personal/unsubscribe/", 'alias="unsubscribe"', "RedirectTo(@UnsubscribeUrl)"]);
+
+      const docsferaUrls = html.match(/https?:\/\/docsfera\.ru\/voting\/cxq\/\?[^"'\s<>]+/gi) || [];
+      const qualtricsUrls = html.match(/https?:\/\/(?:sanofidigital\.[^/]+|[^/]*qualtrics\.com)\/jfe\/form\/[^"'\s<>]+/gi) || [];
+      if (!docsferaUrls.length && !qualtricsUrls.length) {
+        add("Блок №5", "error", "CXQ-блок не найден", "Добавьте ссылки docsfera.ru/voting/cxq/ или Qualtrics");
+      } else {
+        const ratings = new Set();
+        docsferaUrls.forEach((url) => {
+          const rm = url.match(/[?&]R=(\d)/i);
+          if (rm) ratings.add(Number(rm[1]));
+          const params = new URLSearchParams(url.split("?")[1] || "");
+          const cn = (params.get("CN") || "").toLowerCase();
+          if (cn !== "promo" && !params.get("utm_campaign")) {
+            add("Блок №5 (CXQ)", "error", "В docsfera CXQ-ссылке отсутствует utm_campaign", "Добавьте utm_campaign, если CN не promo", url.slice(0, 200));
+          }
+        });
+        qualtricsUrls.forEach((url) => {
+          const rm = url.match(/[?&]R=(\d)/i);
+          if (rm) ratings.add(Number(rm[1]));
+        });
+        if (ratings.size < 7) add("Блок №5", "warning", `Найдено оценок R: ${[...ratings].sort()} — нужно 7`, "Каждая кнопка R=1..7");
+      }
+
+      const body = (html.match(/<body[^>]*>([\s\S]*)<\/body>/i) || [])[1] || html;
+      if (/\$\{[^}]*\}|Recipient\.|Email\.Message/i.test(body)) {
+        add("Mindbox", "error", "Остались Mindbox-токены", "Замените на SFMC AMPscript");
+      }
+
+      return { ok: !issues.some((i) => i.severity === "error"), issues };
+    }
+
+    function escapeHtml(v) {
+      return String(v).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+    }
+
+    function renderList(el, title, items, cls) {
+      if (!items.length) {
+        el.innerHTML = `<div class="empty"><div><div class="empty-icon">ℹ️</div><div>${escapeHtml(title)}: нет данных</div></div></div>`;
+        return;
+      }
+      el.innerHTML = `<h3 style="margin:0 0 12px;">${escapeHtml(title)}</h3>` +
+        items.map((t) => `<div class="issue ${cls}"><div class="msg">${escapeHtml(t)}</div></div>`).join("");
+    }
+
+    function renderValidation(report, label) {
+      if (!report.issues.length) {
+        els.validation.innerHTML = `<h3 style="margin-top:0;">${escapeHtml(label)}</h3><div class="empty"><div><div class="empty-icon">✅</div><div>Ошибок не найдено. Все обязательные блоки на месте.</div></div></div>`;
+        return;
+      }
+      els.validation.innerHTML = `<h3 style="margin-top:0;">${escapeHtml(label)}: ${report.ok ? "есть предупреждения" : "есть ошибки"}</h3>` +
+        report.issues.map((i) => `<div class="issue ${i.severity}"><div class="meta">${escapeHtml(i.block)} · ${i.severity}</div><div class="msg">${escapeHtml(i.message)}</div>${i.hint ? `<div class="hint">${escapeHtml(i.hint)}</div>` : ""}${i.snippet ? `<div class="snippet"><code>${escapeHtml(i.snippet)}</code></div>` : ""}</div>`).join("");
+    }
+
+    function setStatus(ok, text) {
+      els.statusBanner.classList.add("visible");
+      els.statusBanner.classList.toggle("ok", ok);
+      els.statusBanner.classList.toggle("bad", !ok);
+      els.statusIcon.textContent = ok ? "✓" : "!";
+      els.statusTitle.textContent = ok ? "Готово к использованию" : "Нужна проверка";
+      els.statusText.textContent = text;
+    }
+
+    function isUtmCampaignRequired() {
+      const cn = document.getElementById("cxq_cn").value.trim().toLowerCase();
+      if (cn === "promo") return false;
+      if (cn && cn !== "promo") return true;
+      return false;
+    }
+
+    function updateUtmRequiredState() {
+      const required = isUtmCampaignRequired();
+      const field = document.getElementById("field-utm");
+      const marker = document.getElementById("utm-required");
+      const help = document.getElementById("utm-help");
+      marker.hidden = !required;
+      field.classList.toggle("optional", !required);
+      help.textContent = required
+        ? "Обязательное поле. Подставляется в CXQ-ссылки, если CN не promo."
+        : "Не используется при CN=promo — можно оставить пустым.";
+      if (!required) field.classList.remove("invalid");
+    }
+
+    function validateForm() {
+      updateUtmRequiredState();
+      document.getElementById("field-utm").classList.remove("invalid");
+      if (!selectedFile) {
+        toast("Сначала загрузите HTML-файл", "error");
+        setStep(1);
+        return false;
+      }
+      const p = getParams();
+      if (isUtmCampaignRequired() && !p.utm_campaign) {
+        document.getElementById("field-utm").classList.add("invalid");
+        toast("Заполните utm_campaign — выбран CN не promo", "error");
+        setStep(2);
+        return false;
+      }
+      return true;
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return `${bytes} B`;
+      return `${(bytes / 1024).toFixed(1)} KB`;
+    }
+
+    function setFile(file) {
+      if (!file) return;
+      selectedFile = file;
+      convertedHtml = null;
+      uploadedHtmlSnippet = "";
+      file.text().then((text) => { uploadedHtmlSnippet = text; updateUtmRequiredState(); }).catch(() => {});
+      els.downloadBtn.disabled = true;
+      els.fileName.textContent = file.name;
+      els.fileMeta.textContent = `${formatSize(file.size)} · ${file.type || "HTML"}`;
+      els.fileChip.classList.add("visible");
+      els.uploadZone.style.display = "none";
+      outputFilename = file.name.replace(/mindbox/i, "SFMC").replace(/\.html?$/i, "") + "_SFMC.html";
+      setStep(2);
+      toast(file.name.toLowerCase().includes("mindbox") ? "Файл загружен" : "Файл загружен, но в названии нет Mindbox", file.name.toLowerCase().includes("mindbox") ? "success" : "info");
+    }
+
+    function clearFile() {
+      selectedFile = null;
+      convertedHtml = null;
+      els.fileInput.value = "";
+      els.fileChip.classList.remove("visible");
+      els.uploadZone.style.display = "block";
+      els.downloadBtn.disabled = true;
+      els.statusBanner.classList.remove("visible");
+      setStep(1);
+      toast("Файл удалён", "info");
+    }
+
+    function populateSelect(id, values) {
+      const el = document.getElementById(id);
+      const unique = [...new Set((values || []).filter(Boolean))];
+      el.innerHTML = '<option value="">— не выбрано —</option>' +
+        unique.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+      el.value = "";
+    }
+
+    function renderBrands(list) {
+      els.brandSelect.innerHTML = '<option value="">— не выбран —</option>' +
+        list.map((b) => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join("");
+      els.brandSelect.value = "";
+    }
+
+    function applyBrandDefaults() {
+      const brand = els.brandSelect.value;
+      const rows = CXQ.rows.filter((r) => r.Brand === brand);
+      if (!rows.length) return;
+      updateUtmRequiredState();
+      document.getElementById("da-list").innerHTML = [...new Set(rows.map((r) => r.DA).filter(Boolean))].map((v) => `<option value="${escapeHtml(v)}"></option>`).join("");
+      document.getElementById("ta-list").innerHTML = [...new Set(rows.map((r) => r.TA).filter(Boolean))].map((v) => `<option value="${escapeHtml(v)}"></option>`).join("");
+    }
+
+    function setLoading(isLoading) {
+      els.convertBtn.disabled = isLoading;
+      document.getElementById("validate-btn").disabled = isLoading;
+      els.convertBtn.classList.toggle("loading", isLoading);
+    }
+
+    els.uploadZone.onclick = () => els.fileInput.click();
+    document.getElementById("clear-file-btn").onclick = clearFile;
+    els.fileInput.onchange = () => setFile(els.fileInput.files[0]);
+    els.uploadZone.ondragover = (e) => { e.preventDefault(); els.uploadZone.classList.add("drag"); };
+    els.uploadZone.ondragleave = () => els.uploadZone.classList.remove("drag");
+    els.uploadZone.ondrop = (e) => { e.preventDefault(); els.uploadZone.classList.remove("drag"); setFile(e.dataTransfer.files[0]); };
+    els.brandSearch.oninput = () => {
+      const q = els.brandSearch.value.trim().toLowerCase();
+      const filtered = CXQ.brands.filter((b) => b.toLowerCase().includes(q));
+      renderBrands(filtered.length ? filtered : CXQ.brands);
+    };
+    els.brandSelect.onchange = applyBrandDefaults;
+    document.getElementById("cxq_cn").onchange = updateUtmRequiredState;
+    document.querySelectorAll(".tab").forEach((tab) => tab.onclick = () => switchTab(tab.dataset.tab));
+
+    document.getElementById("validate-btn").onclick = async () => {
+      if (!selectedFile) return toast("Выберите файл", "error");
+      setLoading(true);
+      try {
+        const html = await selectedFile.text();
+        const report = validateSfmcHtml(html);
+        renderValidation(report, "Проверка файла");
+        setStatus(report.ok, report.ok ? "Можно переходить к конвертации" : "Есть ошибки — исправьте перед SFMC");
+        switchTab("validation");
+        setStep(2);
+        toast("Проверка завершена", "info");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    document.getElementById("convert-btn").onclick = async () => {
+      if (!validateForm()) return;
+      setLoading(true);
+      try {
+        const html = await selectedFile.text();
+        const result = convertMindboxToSfmc(html, getParams());
+        convertedHtml = result.html;
+        const report = validateSfmcHtml(result.html);
+        renderList(els.changes, "Выполненные изменения", result.changes, "info");
+        if (result.warnings.length) {
+          els.warnings.style.display = "block";
+          renderList(els.warnings, "Предупреждения", result.warnings, "warning");
+        } else {
+          els.warnings.style.display = "none";
+        }
+        renderValidation(report, "Проверка после конвертации");
+        els.preview.textContent = result.html.slice(0, 15000) + (result.html.length > 15000 ? "\n\n... (обрезано)" : "");
+        els.downloadBtn.disabled = false;
+        setStatus(report.ok, report.ok ? "Файл готов — нажмите «Скачать SFMC HTML»" : "Есть замечания — проверьте вкладку «Проверка»");
+        switchTab("validation");
+        setStep(3);
+        toast(report.ok ? "Конвертация успешна" : "Конвертация завершена с замечаниями", report.ok ? "success" : "info");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    document.getElementById("download-btn").onclick = () => {
+      if (!convertedHtml) return;
+      const blob = new Blob([convertedHtml], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = outputFilename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast(`Скачан файл: ${outputFilename}`, "success");
+    };
+
+    populateSelect("cxq_bu", CXQ.unique_values?.BU);
+    populateSelect("cxq_function", CXQ.unique_values?.Function);
+    populateSelect("cxq_cn", CXQ.unique_values?.CN);
+    renderBrands(CXQ.brands || []);
+    updateUtmRequiredState();
+    setStep(1);
+  </script>
+</body>
+</html>

@@ -1,0 +1,1289 @@
+{
+  "columns": [
+    "Brand",
+    "DA",
+    "TA",
+    "BU",
+    "Function",
+    "CN"
+  ],
+  "rows": [
+    {
+      "Brand": "T1D Autoimmune",
+      "DA": "TOPICS",
+      "TA": "Endocrinology",
+      "BU": "GENERAL MEDICINES",
+      "Function": "Commercial",
+      "CN": "promo"
+    },
+    {
+      "Brand": "DUPIXENT",
+      "DA": "ATOPIC DERMATITIS",
+      "TA": "Dermatology",
+      "BU": "SPECIALTY CARE",
+      "Function": "Medical",
+      "CN": "journey"
+    },
+    {
+      "Brand": "LIBTAYO",
+      "DA": "CERVICAL CANCER",
+      "TA": "Oncology",
+      "BU": "VACCINES",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "APIDRA",
+      "DA": "TYPE 1 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "TAVANIC",
+      "DA": "ANTI-INFECTIVES",
+      "TA": "OTHER GENERAL MEDICINES",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "LANTUS",
+      "DA": "TYPE 1 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "XENPOZYME",
+      "DA": "ACID SPHINGOMYLENASE DEFICIENCY (NIEMANN-PICK)",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "TOUJEO",
+      "DA": "TYPE 1 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "AMARYL",
+      "DA": "TYPE 2 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "DUPIXENT",
+      "DA": "ASTHMA",
+      "TA": "Respiratory",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "APIDRA",
+      "DA": "TYPE 2 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "FOKUSIN",
+      "DA": "BENIGN PROSTATIC HYPERPLASIA (BPH)",
+      "TA": "OTHER GENERAL MEDICINES",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "PENESTER",
+      "DA": "BENIGN PROSTATIC HYPERPLASIA (BPH)",
+      "TA": "OTHER GENERAL MEDICINES",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "LANTUS",
+      "DA": "TYPE 2 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ORKAMBI",
+      "DA": "CYSTIC FIBROSIS",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "LYXUMIA",
+      "DA": "TYPE 2 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "TRIKAFTA",
+      "DA": "CYSTIC FIBROSIS",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "SOLIQUA",
+      "DA": "TYPE 2 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "TOUJEO",
+      "DA": "TYPE 2 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "DUPIXENT",
+      "DA": "CHRONIC OBSTRUCTIVE PULMONARY DISEASE (COPD)",
+      "TA": "Respiratory",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ZALTRAP",
+      "DA": "COLORECTAL CANCER",
+      "TA": "Oncology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "PRALUENT",
+      "DA": "DYSLIPIDEMIA",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "DUPIXENT",
+      "DA": "CHRONIC RHINOSINUSITIS WITH NASAL POLYPS (CRSwNP)",
+      "TA": "Rhinology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ROSUCARD",
+      "DA": "DYSLIPIDEMIA",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ZENON",
+      "DA": "DYSLIPIDEMIA",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "DUPIXENT",
+      "DA": "EOSINOPHILIC ESOPHAGITIS (EoE)",
+      "TA": "Gastroenterology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "FABRAZYME",
+      "DA": "FABRY",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "CERDELGA",
+      "DA": "GAUCHER",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "CEREZYME",
+      "DA": "GAUCHER",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "GRANOCYTE",
+      "DA": "NEUTROPHIL DEFICIENCY",
+      "TA": "Oncology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "TRENTAL",
+      "DA": "PERIPHERAL ARTERIAL DISEASE",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "APROVASC",
+      "DA": "HYPERTENSION",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "JEVTANA",
+      "DA": "PROSTATE CANCER",
+      "TA": "Oncology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "APROVEL",
+      "DA": "HYPERTENSION",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "DUPIXENT",
+      "DA": "PRURIGO NODULARIS",
+      "TA": "Dermatology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "LOZAP",
+      "DA": "HYPERTENSION",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "LOZAP AM",
+      "DA": "HYPERTENSION",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "MYOZYME",
+      "DA": "POMPE",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "LOZAP PLUS",
+      "DA": "HYPERTENSION",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "NEXVIAZYME",
+      "DA": "POMPE",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "KEVZARA",
+      "DA": "RHEUMATOID ARTHRITIS",
+      "TA": "Rheumatology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "TELZAP",
+      "DA": "HYPERTENSION",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "TELZAP AM",
+      "DA": "HYPERTENSION",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "CAPRELSA",
+      "DA": "THYROID CANCER",
+      "TA": "Oncology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "TELZAP Plus",
+      "DA": "HYPERTENSION",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "THYROGEN",
+      "DA": "THYROID CANCER",
+      "TA": "Oncology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "EVOLTRA",
+      "DA": "LEUKEMIA/LYMPHOMA",
+      "TA": "Oncology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "CLEXANE",
+      "DA": "THROMBOSIS",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "SARCLISA",
+      "DA": "MULTIPLE MYELOMA",
+      "TA": "HEMATOLOGY",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ALDURAZYME",
+      "DA": "MUCOPOLYSACCHARIDOSIS (MPS)",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "PLAVIX",
+      "DA": "THROMBOSIS",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "MOZOBIL",
+      "DA": "autologous HEMATOPOIETIC STEM CELL TRANSPLANTATION (aHSCT)",
+      "TA": "Transplant",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "AUBAGIO",
+      "DA": "MULTIPLE SCLEROSIS",
+      "TA": "Neurology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "LEMTRADA",
+      "DA": "MULTIPLE SCLEROSIS",
+      "TA": "Neurology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "PENTAXIM",
+      "DA": "VACCINES",
+      "TA": "VACCINES",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ADACEL",
+      "DA": "VACCINES",
+      "TA": "VACCINES",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "MENACTRA",
+      "DA": "VACCINES",
+      "TA": "VACCINES",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "DEPAKINE",
+      "DA": "BIPOLAR DISORDER",
+      "TA": "Psychiatry",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "CABLIVI",
+      "DA": "acquired THROMBOTIC THROMBOCYTOPENIC PURPURA (aTTP/iTTP)",
+      "TA": "RARE BLOOD DISORDERS",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "MENQUADFI",
+      "DA": "VACCINES",
+      "TA": "VACCINES",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ALYFTREK",
+      "DA": "CYSTIC FIBROSIS",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "REZTIREG",
+      "DA": "chronic GRAFT-VERSUS-HOST DISEASE (cGVHD)",
+      "TA": "Transplant",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "First infusion Xenpozyme",
+      "DA": "TOPICS",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "Sanofi",
+      "DA": "",
+      "TA": "",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "Old products",
+      "DA": "",
+      "TA": "",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "DUPILUMAB",
+      "DA": "ATOPIC DERMATITIS",
+      "TA": "Dermatology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "CEMIPLIMAB",
+      "DA": "CERVICAL CANCER",
+      "TA": "Oncology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "INSULIN GLARGINE U100",
+      "DA": "TYPE 1 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "INSULIN GLARGINE U300",
+      "DA": "TYPE 1 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "LEVOFLOXACIN",
+      "DA": "ANTI-INFECTIVES",
+      "TA": "OTHER GENERAL MEDICINES",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "INSULIN GLULISINE",
+      "DA": "TYPE 1 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "OLIPUDASE ALFA",
+      "DA": "ACID SPHINGOMYLENASE DEFICIENCY (NIEMANN-PICK)",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "TEPLIZUMAB",
+      "DA": "TYPE 1 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "DUPILUMAB",
+      "DA": "ASTHMA",
+      "TA": "Respiratory",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "CAPLACIZUMAB-YHDP",
+      "DA": "acquired THROMBOTIC THROMBOCYTOPENIC PURPURA (aTTP/iTTP)",
+      "TA": "RARE BLOOD DISORDERS",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "GLIMEPIRIDE",
+      "DA": "TYPE 2 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "FINASTERIDE",
+      "DA": "BENIGN PROSTATIC HYPERPLASIA (BPH)",
+      "TA": "OTHER GENERAL MEDICINES",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "INSULIN GLARGINE AND LIXISENATIDE",
+      "DA": "TYPE 2 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "INSULIN GLARGINE U100",
+      "DA": "TYPE 2 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "INSULIN GLARGINE U300",
+      "DA": "TYPE 2 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "TAMSULOSIN",
+      "DA": "BENIGN PROSTATIC HYPERPLASIA (BPH)",
+      "TA": "OTHER GENERAL MEDICINES",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "INSULIN GLULISINE",
+      "DA": "TYPE 2 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "IVACAFTOR/TEZACAFTOR/ELEXACAFTOR AND IVACAFTOR",
+      "DA": "CYSTIC FIBROSIS",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "LUMACAFTOR AND IVACAFTOR",
+      "DA": "CYSTIC FIBROSIS",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "LIXISENATIDE",
+      "DA": "TYPE 2 DIABETES",
+      "TA": "Diabetes",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "DUPILUMAB",
+      "DA": "CHRONIC OBSTRUCTIVE PULMONARY DISEASE (COPD)",
+      "TA": "Respiratory",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "DTACP-HIB-IPV (PENTA ACELLULAR) - PRIMARY SERIES",
+      "DA": "DTACP-HIB-IPV (PENTA ACELLULAR) - PRIMARY SERIES",
+      "TA": "VACCINES",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "AFLIBERCEPT",
+      "DA": "COLORECTAL CANCER",
+      "TA": "Oncology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ALIROCUMAB",
+      "DA": "DYSLIPIDEMIA",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "EZETIMIBE AND ROSUVASTATIN",
+      "DA": "DYSLIPIDEMIA",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "DUPILUMAB",
+      "DA": "CHRONIC RHINOSINUSITIS WITH NASAL POLYPS (CRSwNP)",
+      "TA": "Rhinology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ROSUVASTATIN",
+      "DA": "DYSLIPIDEMIA",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "DUPILUMAB",
+      "DA": "EOSINOPHILIC ESOPHAGITIS (EoE)",
+      "TA": "Gastroenterology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "AGALSIDASE BETA",
+      "DA": "FABRY",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ELIGLUSTAT",
+      "DA": "GAUCHER",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "IMIGLUCERASE",
+      "DA": "GAUCHER",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "LENOGRASTIM",
+      "DA": "NEUTROPHIL DEFICIENCY",
+      "TA": "Oncology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "PENTOXIFYLLINE",
+      "DA": "PERIPHERAL ARTERIAL DISEASE",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "FITUSIRAN",
+      "DA": "HEMOPHILIA A",
+      "TA": "HEMATOLOGY",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "AMLODIPINE AND IRBESARTAN",
+      "DA": "HYPERTENSION",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "CABAZITAXEL",
+      "DA": "PROSTATE CANCER",
+      "TA": "Oncology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "DUPILUMAB",
+      "DA": "PRURIGO NODULARIS",
+      "TA": "Dermatology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "IRBESARTAN",
+      "DA": "HYPERTENSION",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "LOSARTAN",
+      "DA": "HYPERTENSION",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ALGLUCOSIDASE ALFA",
+      "DA": "POMPE",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "AVALGLUCOSIDASE ALFA",
+      "DA": "POMPE",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "TELMISARTAN",
+      "DA": "HYPERTENSION",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "SARILUMAB",
+      "DA": "RHEUMATOID ARTHRITIS",
+      "TA": "Rheumatology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "CLOFARABINE",
+      "DA": "LEUKEMIA/LYMPHOMA",
+      "TA": "Oncology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "THYROTROPHINE ALFA",
+      "DA": "THYROID CANCER",
+      "TA": "Oncology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "VANDETANIB",
+      "DA": "THYROID CANCER",
+      "TA": "Oncology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "MENINGO CONJUGATE ACWY",
+      "DA": "MENINGOCOCCAL DISEASE",
+      "TA": "VACCINES",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "Tdap - BOOSTER",
+      "DA": "Tdap - BOOSTER",
+      "TA": "VACCINES",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ISATUXIMAB",
+      "DA": "MULTIPLE MYELOMA",
+      "TA": "HEMATOLOGY",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "CLOPIDOGREL",
+      "DA": "THROMBOSIS",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ENOXAPARIN",
+      "DA": "THROMBOSIS",
+      "TA": "Cardiology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "LARONIDASE",
+      "DA": "MUCOPOLYSACCHARIDOSIS (MPS)",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "ALEMTUZUMAB",
+      "DA": "MULTIPLE SCLEROSIS",
+      "TA": "Neurology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "PLERIXAFOR",
+      "DA": "autologous HEMATOPOIETIC STEM CELL TRANSPLANTATION (aHSCT)",
+      "TA": "Transplant",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "TERIFLUNOMIDE",
+      "DA": "MULTIPLE SCLEROSIS",
+      "TA": "Neurology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "VALPROIC ACID",
+      "DA": "BIPOLAR DISORDER",
+      "TA": "Neurology",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "BELUMOSUDIL",
+      "DA": "chronic GRAFT-VERSUS-HOST DISEASE (cGVHD)",
+      "TA": "Transplant",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    },
+    {
+      "Brand": "VANZACAFTOR/TEZACAFTOR/DEUTIVACAFTOR",
+      "DA": "CYSTIC FIBROSIS",
+      "TA": "RARE DISEASE",
+      "BU": "",
+      "Function": "",
+      "CN": ""
+    }
+  ],
+  "brands": [
+    "ADACEL",
+    "AFLIBERCEPT",
+    "AGALSIDASE BETA",
+    "ALDURAZYME",
+    "ALEMTUZUMAB",
+    "ALGLUCOSIDASE ALFA",
+    "ALIROCUMAB",
+    "ALYFTREK",
+    "AMARYL",
+    "AMLODIPINE AND IRBESARTAN",
+    "APIDRA",
+    "APROVASC",
+    "APROVEL",
+    "AUBAGIO",
+    "AVALGLUCOSIDASE ALFA",
+    "BELUMOSUDIL",
+    "CABAZITAXEL",
+    "CABLIVI",
+    "CAPLACIZUMAB-YHDP",
+    "CAPRELSA",
+    "CEMIPLIMAB",
+    "CERDELGA",
+    "CEREZYME",
+    "CLEXANE",
+    "CLOFARABINE",
+    "CLOPIDOGREL",
+    "DEPAKINE",
+    "DTACP-HIB-IPV (PENTA ACELLULAR) - PRIMARY SERIES",
+    "DUPILUMAB",
+    "DUPIXENT",
+    "ELIGLUSTAT",
+    "ENOXAPARIN",
+    "EVOLTRA",
+    "EZETIMIBE AND ROSUVASTATIN",
+    "FABRAZYME",
+    "FINASTERIDE",
+    "FITUSIRAN",
+    "FOKUSIN",
+    "First infusion Xenpozyme",
+    "GLIMEPIRIDE",
+    "GRANOCYTE",
+    "IMIGLUCERASE",
+    "INSULIN GLARGINE AND LIXISENATIDE",
+    "INSULIN GLARGINE U100",
+    "INSULIN GLARGINE U300",
+    "INSULIN GLULISINE",
+    "IRBESARTAN",
+    "ISATUXIMAB",
+    "IVACAFTOR/TEZACAFTOR/ELEXACAFTOR AND IVACAFTOR",
+    "JEVTANA",
+    "KEVZARA",
+    "LANTUS",
+    "LARONIDASE",
+    "LEMTRADA",
+    "LENOGRASTIM",
+    "LEVOFLOXACIN",
+    "LIBTAYO",
+    "LIXISENATIDE",
+    "LOSARTAN",
+    "LOZAP",
+    "LOZAP AM",
+    "LOZAP PLUS",
+    "LUMACAFTOR AND IVACAFTOR",
+    "LYXUMIA",
+    "MENACTRA",
+    "MENINGO CONJUGATE ACWY",
+    "MENQUADFI",
+    "MOZOBIL",
+    "MYOZYME",
+    "NEXVIAZYME",
+    "OLIPUDASE ALFA",
+    "ORKAMBI",
+    "Old products",
+    "PENESTER",
+    "PENTAXIM",
+    "PENTOXIFYLLINE",
+    "PLAVIX",
+    "PLERIXAFOR",
+    "PRALUENT",
+    "REZTIREG",
+    "ROSUCARD",
+    "ROSUVASTATIN",
+    "SARCLISA",
+    "SARILUMAB",
+    "SOLIQUA",
+    "Sanofi",
+    "T1D Autoimmune",
+    "TAMSULOSIN",
+    "TAVANIC",
+    "TELMISARTAN",
+    "TELZAP",
+    "TELZAP AM",
+    "TELZAP Plus",
+    "TEPLIZUMAB",
+    "TERIFLUNOMIDE",
+    "THYROGEN",
+    "THYROTROPHINE ALFA",
+    "TOUJEO",
+    "TRENTAL",
+    "TRIKAFTA",
+    "Tdap - BOOSTER",
+    "VALPROIC ACID",
+    "VANDETANIB",
+    "VANZACAFTOR/TEZACAFTOR/DEUTIVACAFTOR",
+    "XENPOZYME",
+    "ZALTRAP",
+    "ZENON"
+  ],
+  "unique_values": {
+    "Brand": [
+      "ADACEL",
+      "AFLIBERCEPT",
+      "AGALSIDASE BETA",
+      "ALDURAZYME",
+      "ALEMTUZUMAB",
+      "ALGLUCOSIDASE ALFA",
+      "ALIROCUMAB",
+      "ALYFTREK",
+      "AMARYL",
+      "AMLODIPINE AND IRBESARTAN",
+      "APIDRA",
+      "APROVASC",
+      "APROVEL",
+      "AUBAGIO",
+      "AVALGLUCOSIDASE ALFA",
+      "BELUMOSUDIL",
+      "CABAZITAXEL",
+      "CABLIVI",
+      "CAPLACIZUMAB-YHDP",
+      "CAPRELSA",
+      "CEMIPLIMAB",
+      "CERDELGA",
+      "CEREZYME",
+      "CLEXANE",
+      "CLOFARABINE",
+      "CLOPIDOGREL",
+      "DEPAKINE",
+      "DTACP-HIB-IPV (PENTA ACELLULAR) - PRIMARY SERIES",
+      "DUPILUMAB",
+      "DUPIXENT",
+      "ELIGLUSTAT",
+      "ENOXAPARIN",
+      "EVOLTRA",
+      "EZETIMIBE AND ROSUVASTATIN",
+      "FABRAZYME",
+      "FINASTERIDE",
+      "FITUSIRAN",
+      "FOKUSIN",
+      "First infusion Xenpozyme",
+      "GLIMEPIRIDE",
+      "GRANOCYTE",
+      "IMIGLUCERASE",
+      "INSULIN GLARGINE AND LIXISENATIDE",
+      "INSULIN GLARGINE U100",
+      "INSULIN GLARGINE U300",
+      "INSULIN GLULISINE",
+      "IRBESARTAN",
+      "ISATUXIMAB",
+      "IVACAFTOR/TEZACAFTOR/ELEXACAFTOR AND IVACAFTOR",
+      "JEVTANA",
+      "KEVZARA",
+      "LANTUS",
+      "LARONIDASE",
+      "LEMTRADA",
+      "LENOGRASTIM",
+      "LEVOFLOXACIN",
+      "LIBTAYO",
+      "LIXISENATIDE",
+      "LOSARTAN",
+      "LOZAP",
+      "LOZAP AM",
+      "LOZAP PLUS",
+      "LUMACAFTOR AND IVACAFTOR",
+      "LYXUMIA",
+      "MENACTRA",
+      "MENINGO CONJUGATE ACWY",
+      "MENQUADFI",
+      "MOZOBIL",
+      "MYOZYME",
+      "NEXVIAZYME",
+      "OLIPUDASE ALFA",
+      "ORKAMBI",
+      "Old products",
+      "PENESTER",
+      "PENTAXIM",
+      "PENTOXIFYLLINE",
+      "PLAVIX",
+      "PLERIXAFOR",
+      "PRALUENT",
+      "REZTIREG",
+      "ROSUCARD",
+      "ROSUVASTATIN",
+      "SARCLISA",
+      "SARILUMAB",
+      "SOLIQUA",
+      "Sanofi",
+      "T1D Autoimmune",
+      "TAMSULOSIN",
+      "TAVANIC",
+      "TELMISARTAN",
+      "TELZAP",
+      "TELZAP AM",
+      "TELZAP Plus",
+      "TEPLIZUMAB",
+      "TERIFLUNOMIDE",
+      "THYROGEN",
+      "THYROTROPHINE ALFA",
+      "TOUJEO",
+      "TRENTAL",
+      "TRIKAFTA",
+      "Tdap - BOOSTER",
+      "VALPROIC ACID",
+      "VANDETANIB",
+      "VANZACAFTOR/TEZACAFTOR/DEUTIVACAFTOR",
+      "XENPOZYME",
+      "ZALTRAP",
+      "ZENON"
+    ],
+    "DA": [
+      "ACID SPHINGOMYLENASE DEFICIENCY (NIEMANN-PICK)",
+      "ANTI-INFECTIVES",
+      "ASTHMA",
+      "ATOPIC DERMATITIS",
+      "BENIGN PROSTATIC HYPERPLASIA (BPH)",
+      "BIPOLAR DISORDER",
+      "CERVICAL CANCER",
+      "CHRONIC OBSTRUCTIVE PULMONARY DISEASE (COPD)",
+      "CHRONIC RHINOSINUSITIS WITH NASAL POLYPS (CRSwNP)",
+      "COLORECTAL CANCER",
+      "CYSTIC FIBROSIS",
+      "DTACP-HIB-IPV (PENTA ACELLULAR) - PRIMARY SERIES",
+      "DYSLIPIDEMIA",
+      "EOSINOPHILIC ESOPHAGITIS (EoE)",
+      "FABRY",
+      "GAUCHER",
+      "HEMOPHILIA A",
+      "HYPERTENSION",
+      "LEUKEMIA/LYMPHOMA",
+      "MENINGOCOCCAL DISEASE",
+      "MUCOPOLYSACCHARIDOSIS (MPS)",
+      "MULTIPLE MYELOMA",
+      "MULTIPLE SCLEROSIS",
+      "NEUTROPHIL DEFICIENCY",
+      "PERIPHERAL ARTERIAL DISEASE",
+      "POMPE",
+      "PROSTATE CANCER",
+      "PRURIGO NODULARIS",
+      "RHEUMATOID ARTHRITIS",
+      "THROMBOSIS",
+      "THYROID CANCER",
+      "TOPICS",
+      "TYPE 1 DIABETES",
+      "TYPE 2 DIABETES",
+      "Tdap - BOOSTER",
+      "VACCINES",
+      "acquired THROMBOTIC THROMBOCYTOPENIC PURPURA (aTTP/iTTP)",
+      "autologous HEMATOPOIETIC STEM CELL TRANSPLANTATION (aHSCT)",
+      "chronic GRAFT-VERSUS-HOST DISEASE (cGVHD)"
+    ],
+    "TA": [
+      "Cardiology",
+      "Dermatology",
+      "Diabetes",
+      "Endocrinology",
+      "Gastroenterology",
+      "HEMATOLOGY",
+      "Neurology",
+      "OTHER GENERAL MEDICINES",
+      "Oncology",
+      "Psychiatry",
+      "RARE BLOOD DISORDERS",
+      "RARE DISEASE",
+      "Respiratory",
+      "Rheumatology",
+      "Rhinology",
+      "Transplant",
+      "VACCINES"
+    ],
+    "BU": [
+      "GENERAL MEDICINES",
+      "SPECIALTY CARE",
+      "VACCINES"
+    ],
+    "Function": [
+      "Commercial",
+      "Medical"
+    ],
+    "CN": [
+      "journey",
+      "promo"
+    ]
+  }
+}

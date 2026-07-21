@@ -1,0 +1,1 @@
+"""Mindbox → SFMC email converter."""
