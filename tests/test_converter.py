@@ -203,7 +203,6 @@ def test_digest_immuno_gender_greeting_and_cxq():
     assert "Recipient.IsMale" not in result
     assert '${Recipient.FirstAndMiddleName}' not in result
     assert 'href="https://docsfera.ru/upload/ohlp/open-no-index/ohlp-dupilumab-2026.pdf"' in result
-    assert "Function=Commercial&CN=promo" in result
     assert "Function=Medical&CN=promo" in result
     assert "utm_campaign" not in result.split("voting/cxq", 1)[1][:800]
     assert 'alias="unsubscribe" href="%%=RedirectTo(@UnsubscribeUrl)=%%"' in result
@@ -224,13 +223,13 @@ def test_digest_onco_research_deeplinks_and_cxq_casing():
 
     assert "Здравствуйте, %%=v(@title)=%%" in result
     assert "DA=chronic_GVHD" in result
-    assert "Franchise=TRANSPLANT" in result
+    assert "Franchise=REZTIREG" in result
     assert result.count("RedirectTo(@UnsubscribeUrl)") >= 2
     assert "research/novosti_8_go_mezhdunarodnogo_simpoziuma" in result
     assert "research/shkola_aktualnye_voprosy_transplantatsii" in result
 
 
-def test_digest_at1d_qualtrics_and_cta_deeplink():
+def test_qualtrics_cxq_and_cta_deeplink():
     html = (
         Path(__file__).parent / "fixtures" / "Digest_at1d_9_2026_b_mindbox.html"
     ).read_text(encoding="utf-8")
@@ -259,6 +258,30 @@ def test_digest_at1d_qualtrics_and_cta_deeplink():
     report = validate_sfmc_html(result)
     errors = [i for i in report.issues if i.severity == "error"]
     assert not errors
+
+
+def test_cxq_brand_only_uses_mapping_not_mindbox_html():
+    html = (
+        Path(__file__).parent / "fixtures" / "Digest_immuno_14_2026_mindbox_8d26.html"
+    ).read_text(encoding="utf-8")
+    result = convert_mindbox_to_sfmc(html, ConversionParams(cxq_brand="DUPIXENT")).html
+
+    assert "Brand=DUPIXENT" in result
+    assert "DA=ATOPIC_DERMATITIS" in result
+    assert "TA=Dermatology" in result
+    assert "CHRONIC_RHINOSINUSITIS" not in result
+    assert "IMMUNOLOGY" not in result.split("voting/cxq", 1)[1][:400]
+
+
+def test_qualtrics_cxq_brand_uses_mapping():
+    html = (
+        Path(__file__).parent / "fixtures" / "Digest_at1d_9_2026_b_mindbox.html"
+    ).read_text(encoding="utf-8")
+    result = convert_mindbox_to_sfmc(html, ConversionParams(cxq_brand="TOUJEO")).html
+
+    assert "TA=Diabetes" in result
+    assert "CrossTA" not in result
+    assert "qualtrics.com/jfe/form" in result
 
 
 def test_convert_preserves_cxq_when_params_empty():

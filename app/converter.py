@@ -9,6 +9,7 @@ from typing import Callable
 
 from app.blocks import (
     ConversionParams,
+    QUALTRICS_CXQ_HOST_RE,
     block1,
     block2,
     block4_personalization,
@@ -155,11 +156,11 @@ _CXQ_URL_RE = re.compile(
     re.IGNORECASE,
 )
 _QUALTRICS_CXQ_HREF_RE = re.compile(
-    rf'(<a\b[^>]*\bhref\s*=\s*)(["\'])(https?://[^"\']*qualtrics\.com/jfe/form/[^"\']+)(\2)',
+    rf'(<a\b[^>]*\bhref\s*=\s*)(["\'])(https?://{QUALTRICS_CXQ_HOST_RE}/jfe/form/[^"\']+)(\2)',
     re.IGNORECASE,
 )
 _QUALTRICS_CXQ_URL_RE = re.compile(
-    r"https?://[^\"'\s<>]*qualtrics\.com/jfe/form/[^\"'\s<>]+",
+    rf"https?://{QUALTRICS_CXQ_HOST_RE}/jfe/form/[^\"'\s<>]+",
     re.IGNORECASE,
 )
 _SFMC_GREETING_RE = re.compile(
@@ -404,7 +405,7 @@ def _replace_cxq_block(html: str, params: ConversionParams) -> tuple[str, bool]:
 
 
 def _replace_qualtrics_cxq_block(html: str, params: ConversionParams) -> tuple[str, bool]:
-    if not re.search(r"qualtrics\.com/jfe/form", html, re.IGNORECASE):
+    if not re.search(rf"{QUALTRICS_CXQ_HOST_RE}/jfe/form", html, re.IGNORECASE):
         return html, False
 
     count = 0
@@ -437,14 +438,12 @@ def _replace_qualtrics_cxq_block(html: str, params: ConversionParams) -> tuple[s
 
 def _replace_cxq_links(html: str, params: ConversionParams) -> tuple[str, bool]:
     uses_docsfera = bool(re.search(r"docsfera\.ru/voting/cxq", html, re.IGNORECASE))
-    uses_qualtrics = bool(re.search(r"qualtrics\.com/jfe/form", html, re.IGNORECASE))
+    uses_qualtrics = bool(re.search(rf"{QUALTRICS_CXQ_HOST_RE}/jfe/form", html, re.IGNORECASE))
 
     result = html
     changed = False
 
     if uses_docsfera:
-        if params.cxq_cn.lower() != "promo" and not params.utm_campaign:
-            pass
         result, ok = _replace_cxq_block(result, params)
         changed = changed or ok
 
@@ -614,7 +613,7 @@ def convert_mindbox_to_sfmc(html: str, params: ConversionParams) -> ConversionRe
         warnings.append("Блок №4 (deeplink): ссылки docsfera.ru для обёртки не найдены")
 
     has_cxq = bool(
-        re.search(r"docsfera\.ru/voting/cxq|qualtrics\.com/jfe/form", result, re.IGNORECASE)
+        re.search(rf"docsfera\.ru/voting/cxq|{QUALTRICS_CXQ_HOST_RE}/jfe/form", result, re.IGNORECASE)
     )
     if has_cxq:
         uses_docsfera = bool(re.search(r"docsfera\.ru/voting/cxq", result, re.IGNORECASE))

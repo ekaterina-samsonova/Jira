@@ -100,7 +100,7 @@
 
           <div class="form-section">
             <h3>CXQ-параметры (блок №5)</h3>
-            <p><small>Поля необязательны: если в HTML уже есть CXQ-ссылки, параметры сохраняются из шаблона. Заполняйте только для переопределения.</small></p>
+            <p><small>Поля необязательны. Пустая форма — CXQ-ссылки без изменений. При заполнении Brand/DA/TA значения берутся из формы и таблицы маппинга.</small></p>
             <div class="form-grid">
               <label class="field field-wide">
                 <span>Brand</span>
@@ -110,13 +110,13 @@
 
               <label class="field">
                 <span>DA</span>
-                <input type="text" name="cxq_da" id="cxq-da" list="da-options" placeholder="Оставьте пустым — возьмётся из HTML">
+                <input type="text" name="cxq_da" id="cxq-da" list="da-options" placeholder="Из таблицы маппинга по Brand">
                 <datalist id="da-options"></datalist>
               </label>
 
               <label class="field">
                 <span>TA</span>
-                <input type="text" name="cxq_ta" id="cxq-ta" list="ta-options" placeholder="Оставьте пустым — возьмётся из HTML">
+                <input type="text" name="cxq_ta" id="cxq-ta" list="ta-options" placeholder="Из таблицы маппинга по Brand">
                 <datalist id="ta-options"></datalist>
               </label>
 

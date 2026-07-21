@@ -680,7 +680,7 @@
       </div>
       <h1 class="header-title">Sanofi | Mindbox → SFMC Converter v3</h1>
       <p class="header-subtitle">Одноколоночный мастер конвертации шаблонов для SFMC.</p>
-      <div class="version-banner">Версия 4.0 — универсально для всех рассылок, CXQ без автозаполнения</div>
+      <div class="version-banner">Версия 4.1 — CXQ из формы и таблицы маппинга, Qualtrics как отдельный тип</div>
     </div>
   </header>
 
@@ -762,7 +762,7 @@
         </div>
 
         <h3 class="section-title">CXQ-метки <span class="section-badge">блок №5</span></h3>
-        <p style="margin:0 0 16px;color:var(--muted);font-size:14px;">Поля необязательны. Если в HTML уже есть CXQ-ссылки (docsfera или Qualtrics), параметры берутся из шаблона. Заполняйте только для переопределения.</p>
+        <p style="margin:0 0 16px;color:var(--muted);font-size:14px;">Поля необязательны. Если форма пустая — CXQ-ссылки остаются как в файле. При заполнении Brand/DA/TA (и др.) значения берутся из формы и таблицы маппинга, а не из HTML Mindbox.</p>
         <div class="form-grid">
           <div class="field">
             <label for="brand_search">Поиск бренда</label>
@@ -776,17 +776,17 @@
                 <select id="cxq_brand" size="8"></select>
               </div>
             </div>
-            <small>Необязательно. Подсказки DA/TA появятся после выбора бренда.</small>
+            <small>Необязательно. При выборе бренда DA/TA подставляются из таблицы маппинга при конвертации.</small>
           </div>
           <div class="inline-grid">
             <div class="field">
               <label for="cxq_da">DA</label>
-              <input id="cxq_da" list="da-list" placeholder="Из HTML, если пусто">
+              <input id="cxq_da" list="da-list" placeholder="Из таблицы маппинга по Brand">
               <datalist id="da-list"></datalist>
             </div>
             <div class="field">
               <label for="cxq_ta">TA</label>
-              <input id="cxq_ta" list="ta-list" placeholder="Из HTML, если пусто">
+              <input id="cxq_ta" list="ta-list" placeholder="Из таблицы маппинга по Brand">
               <datalist id="ta-list"></datalist>
             </div>
           </div>
@@ -1112,69 +1112,105 @@
       return `<!-----Start--Privacy Link goes here---- >\n%%[\nset @RedirectUri='${url}'\nset @ClientId='${CLIENT_ID}'\nset @Website='https://docsfera.ru/'\n]%%\n%%=ContentBlockbyId("${PRIVACY_CONTENT_BLOCK_ID}")=%%\n<!-----END---Privacy Link goes here ---->`;
     }
 
+    const QUALTRICS_CXQ_HOST_RE = /(?:sanofidigital\.[^/]+|[^/]*qualtrics\.com)/i;
+
     function cxqQueryParam(url, name) {
       const match = url.match(new RegExp(`[?&]${name}=([^&"']+)`, "i"));
       return match ? match[1] : "";
     }
 
+    function mappingRowForBrand(brand) {
+      if (!brand) return {};
+      const target = brand.trim().toUpperCase();
+      return CXQ.rows.find((r) => String(r.Brand || "").trim().toUpperCase() === target) || {};
+    }
+
+    function cxqFormInput(p) {
+      return !!(p.cxq_brand || p.cxq_da || p.cxq_ta || p.cxq_bu || p.cxq_cn || p.cxq_function);
+    }
+
+    function resolveCxqFields(p) {
+      const row = mappingRowForBrand(p.cxq_brand);
+      const pick = (param, key) => (param || row[key] || "").trim();
+      return {
+        brand: pick(p.cxq_brand, "Brand"),
+        da: pick(p.cxq_da, "DA"),
+        ta: pick(p.cxq_ta, "TA"),
+        bu: pick(p.cxq_bu, "BU"),
+        function: pick(p.cxq_function, "Function"),
+        cn: pick(p.cxq_cn, "CN"),
+      };
+    }
+
+    function docsferaCxqDefaults(fields) {
+      return {
+        brand: fields.brand,
+        da: fields.da,
+        ta: fields.ta,
+        bu: fields.bu || "GENERAL_MEDICINES",
+        function: fields.function || "Commercial",
+        cn: fields.cn || "journey",
+      };
+    }
+
+    function cxqToken(value) {
+      return String(value).replace(/ /g, "_");
+    }
+
+    function appendUtmCampaign(url, utmCampaign) {
+      if (!utmCampaign || /utm_campaign=/i.test(url)) return url;
+      return `${url}${url.includes("?") ? "&" : "?"}utm_campaign=${encodeURIComponent(utmCampaign)}`;
+    }
+
     function buildQualtricsCxqUrl(p, rating, originalUrl = "") {
       if (!originalUrl) return "";
-      const decoded = originalUrl;
+      const decoded = decodeHtml(originalUrl);
       const base = decoded.split("?")[0];
-      let ta = cxqQueryParam(decoded, "TA");
-      let bu = cxqQueryParam(decoded, "BU");
-      let cn = cxqQueryParam(decoded, "CN");
       const country = cxqQueryParam(decoded, "Country") || "RU";
       const qlang = cxqQueryParam(decoded, "Q_Language") || "RU";
-      const overrides = !!(p.cxq_ta || p.cxq_bu || p.cxq_cn);
-      if (p.cxq_ta) ta = p.cxq_ta.replace(/ /g, "_");
-      if (p.cxq_bu) bu = p.cxq_bu.replace(/ /g, "_");
-      if (p.cxq_cn) cn = p.cxq_cn;
-      if (!overrides) return decoded;
+      if (!cxqFormInput(p)) return decoded;
+      const fields = docsferaCxqDefaults(resolveCxqFields(p));
+      const ta = cxqToken(fields.ta);
+      const bu = cxqToken(fields.bu);
+      const cn = fields.cn;
       return `${base}?Country=${country}&Q_Language=${qlang}&TA=${ta}&BU=${bu}&CN=${cn}&R=${rating}`;
     }
 
     function buildCxqUrl(p, rating, originalUrl = "") {
       if (originalUrl) {
-        const decoded = originalUrl;
-        let brand = cxqQueryParam(decoded, "Brand");
-        let da = cxqQueryParam(decoded, "DA");
-        let ta = cxqQueryParam(decoded, "TA");
-        let bu = cxqQueryParam(decoded, "BU");
-        let cn = cxqQueryParam(decoded, "CN");
-        let fn = cxqQueryParam(decoded, "Function");
-        let franchise = cxqQueryParam(decoded, "Franchise") || brand || da;
-        const overrides = !!(p.cxq_brand || p.cxq_da || p.cxq_ta || p.cxq_bu || p.cxq_cn || p.cxq_function);
-        const utmAdd = p.utm_campaign && (p.cxq_cn || cn || "").toLowerCase() !== "promo" && !/utm_campaign=/i.test(decoded);
-
-        if (p.cxq_brand) brand = p.cxq_brand.replace(/ /g, "_");
-        if (p.cxq_da) da = p.cxq_da.replace(/ /g, "_");
-        if (p.cxq_ta) ta = p.cxq_ta.replace(/ /g, "_");
-        if (p.cxq_bu) bu = p.cxq_bu.replace(/ /g, "_");
-        if (p.cxq_cn) cn = p.cxq_cn;
-        if (p.cxq_function) fn = p.cxq_function.replace(/ /g, "_");
-        if (!franchise) franchise = brand || da;
-        if (!overrides && !utmAdd) return decoded;
-
-        if (!bu) bu = "GENERAL_MEDICINES";
-        if (!fn) fn = "Commercial";
-        if (!cn) cn = p.cxq_cn || "journey";
-
+        const decoded = decodeHtml(originalUrl);
+        const originalCn = cxqQueryParam(decoded, "CN");
+        const utmAdd = p.utm_campaign && (p.cxq_cn || originalCn || "").toLowerCase() !== "promo" && !/utm_campaign=/i.test(decoded);
+        if (!cxqFormInput(p)) {
+          return utmAdd ? appendUtmCampaign(decoded, p.utm_campaign) : decoded;
+        }
+        const fields = docsferaCxqDefaults(resolveCxqFields(p));
+        const brand = cxqToken(fields.brand);
+        const da = cxqToken(fields.da);
+        const ta = cxqToken(fields.ta);
+        const bu = cxqToken(fields.bu);
+        const fn = cxqToken(fields.function);
+        const cn = fields.cn;
+        const franchise = brand || da;
         let url = `${CXQ_BASE_URL}?Channel=email&R=${rating}&Brand=${brand}&DA=${da}&TA=${ta}&Franchise=${franchise}&BU=${bu}&Function=${fn}&CN=${cn}`;
-        const effectiveCn = (cn || "").toLowerCase();
-        if (effectiveCn !== "promo" && p.utm_campaign) {
+        if (cn.toLowerCase() !== "promo" && p.utm_campaign) {
           url += `&utm_campaign=${encodeURIComponent(p.utm_campaign)}`;
         }
         return url;
       }
 
-      if (!p.cxq_brand || !p.cxq_da || !p.cxq_ta) return "";
-      const enc = (v) => String(v).replace(/ /g, "_").toUpperCase();
-      const bu = enc(p.cxq_bu || "GENERAL_MEDICINES");
-      const fn = encodeURIComponent((p.cxq_function || "Commercial").replace(/ /g, "_"));
-      const cnVal = p.cxq_cn || "journey";
-      let url = `${CXQ_BASE_URL}?Channel=email&R=${rating}&Brand=${enc(p.cxq_brand)}&DA=${enc(p.cxq_da)}&TA=${enc(p.cxq_ta)}&Franchise=${enc(p.cxq_da)}&BU=${bu}&Function=${fn}&CN=${encodeURIComponent(cnVal)}`;
-      if (cnVal.toLowerCase() !== "promo" && p.utm_campaign) {
+      if (!cxqFormInput(p)) return "";
+      const fields = docsferaCxqDefaults(resolveCxqFields(p));
+      if (!fields.brand || !fields.da || !fields.ta) return "";
+      const brand = cxqToken(fields.brand);
+      const da = cxqToken(fields.da);
+      const ta = cxqToken(fields.ta);
+      const bu = cxqToken(fields.bu);
+      const fn = cxqToken(fields.function);
+      const cn = fields.cn;
+      const franchise = brand || da;
+      let url = `${CXQ_BASE_URL}?Channel=email&R=${rating}&Brand=${brand}&DA=${da}&TA=${ta}&Franchise=${franchise}&BU=${bu}&Function=${fn}&CN=${encodeURIComponent(cn)}`;
+      if (cn.toLowerCase() !== "promo" && p.utm_campaign) {
         url += `&utm_campaign=${encodeURIComponent(p.utm_campaign)}`;
       }
       return url;
@@ -1321,9 +1357,9 @@
     }
 
     function replaceQualtricsCxqLinks(html, p) {
-      if (!/qualtrics\.com\/jfe\/form/i.test(html)) return { html, changed: false };
+      if (!QUALTRICS_CXQ_HOST_RE.test(html) || !/\/jfe\/form\//i.test(html)) return { html, changed: false };
       let count = 0;
-      const hrefRe = /(<a\b[^>]*\bhref\s*=\s*)(["'])(https?:\/\/[^"']*qualtrics\.com\/jfe\/form\/[^"']*)(\2)/gi;
+      const hrefRe = new RegExp(`(<a\\b[^>]*\\bhref\\s*=\\s*)(["'])(https?:\\/\\/(?:sanofidigital\\.[^/]+|[^/]*qualtrics\\.com)\\/jfe\\/form\\/[^"']*)(\\2)`, "gi");
       let result = html.replace(hrefRe, (match, open, quote, url, close) => {
         const rating = extractCxqRating(url);
         const next = buildQualtricsCxqUrl(p, rating, decodeHtml(url));
@@ -1331,7 +1367,7 @@
         return `${open}${quote}${next || url}${close}`;
       });
       if (!count) {
-        result = result.replace(/https?:\/\/[^"'\s<>]*qualtrics\.com\/jfe\/form\/[^"'\s<>]+/gi, (url) => {
+        result = result.replace(/https?:\/\/(?:sanofidigital\.[^/]+|[^/]*qualtrics\.com)\/jfe\/form\/[^"'\s<>]+/gi, (url) => {
           const rating = extractCxqRating(url);
           const next = buildQualtricsCxqUrl(p, rating, decodeHtml(url));
           if (next && next !== decodeHtml(url)) count += 1;
@@ -1349,7 +1385,7 @@
         result = docsfera.html;
         changed = changed || docsfera.changed;
       }
-      if (/qualtrics\.com\/jfe\/form/i.test(result)) {
+      if (QUALTRICS_CXQ_HOST_RE.test(result) && /\/jfe\/form\//i.test(result)) {
         const qualtrics = replaceQualtricsCxqLinks(result, p);
         result = qualtrics.html;
         changed = changed || qualtrics.changed;
@@ -1423,7 +1459,7 @@
         warnings.push("Блок №4 (deeplink): ссылки docsfera.ru для обёртки не найдены");
       }
 
-      const hasCxq = /docsfera\.ru\/voting\/cxq|qualtrics\.com\/jfe\/form/i.test(result);
+      const hasCxq = /docsfera\.ru\/voting\/cxq/i.test(result) || (QUALTRICS_CXQ_HOST_RE.test(result) && /\/jfe\/form\//i.test(result));
       if (hasCxq) {
         const usesDocsfera = /docsfera\.ru\/voting\/cxq/i.test(result);
         if (usesDocsfera) {
@@ -1472,7 +1508,7 @@
       req("Блок №6", ["docsfera.ru/personal/unsubscribe/", 'alias="unsubscribe"', "RedirectTo(@UnsubscribeUrl)"]);
 
       const docsferaUrls = html.match(/https?:\/\/docsfera\.ru\/voting\/cxq\/\?[^"'\s<>]+/gi) || [];
-      const qualtricsUrls = html.match(/https?:\/\/[^"'\s<>]*qualtrics\.com\/jfe\/form\/[^"'\s<>]+/gi) || [];
+      const qualtricsUrls = html.match(/https?:\/\/(?:sanofidigital\.[^/]+|[^/]*qualtrics\.com)\/jfe\/form\/[^"'\s<>]+/gi) || [];
       if (!docsferaUrls.length && !qualtricsUrls.length) {
         add("Блок №5", "error", "CXQ-блок не найден", "Добавьте ссылки docsfera.ru/voting/cxq/ или Qualtrics");
       } else {

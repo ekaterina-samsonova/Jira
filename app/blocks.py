@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import html as html_lib
+import json
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass
@@ -102,102 +104,151 @@ def _cxq_query_param(url: str, name: str) -> str:
     return match.group(1) if match else ""
 
 
+_CXQ_MAPPING: dict | None = None
+
+
+def _load_cxq_mapping() -> dict:
+    global _CXQ_MAPPING
+    if _CXQ_MAPPING is None:
+        path = Path(__file__).parent / "data" / "cxq_mapping.json"
+        _CXQ_MAPPING = json.loads(path.read_text(encoding="utf-8"))
+    return _CXQ_MAPPING
+
+
+def _mapping_row_for_brand(brand: str) -> dict[str, str]:
+    if not brand:
+        return {}
+    target = brand.strip().upper()
+    for row in _load_cxq_mapping().get("rows", []):
+        if str(row.get("Brand", "")).strip().upper() == target:
+            return row
+    return {}
+
+
+def _cxq_form_input(params: ConversionParams) -> bool:
+    return any([
+        params.cxq_brand,
+        params.cxq_da,
+        params.cxq_ta,
+        params.cxq_bu,
+        params.cxq_cn,
+        params.cxq_function,
+    ])
+
+
+def resolve_cxq_fields(params: ConversionParams) -> dict[str, str]:
+    """Resolve CXQ fields from form values and brand mapping table (not from HTML)."""
+    row = _mapping_row_for_brand(params.cxq_brand)
+
+    def pick(param_value: str, row_key: str) -> str:
+        if param_value:
+            return param_value.strip()
+        return str(row.get(row_key, "") or "").strip()
+
+    brand = pick(params.cxq_brand, "Brand")
+    da = pick(params.cxq_da, "DA")
+    ta = pick(params.cxq_ta, "TA")
+    bu = pick(params.cxq_bu, "BU")
+    function = pick(params.cxq_function, "Function")
+    cn = pick(params.cxq_cn, "CN")
+    return {
+        "brand": brand,
+        "da": da,
+        "ta": ta,
+        "bu": bu,
+        "function": function,
+        "cn": cn,
+    }
+
+
+def _cxq_token(value: str) -> str:
+    return value.replace(" ", "_")
+
+
+def _docsfera_cxq_defaults(fields: dict[str, str]) -> dict[str, str]:
+    result = dict(fields)
+    if not result["bu"]:
+        result["bu"] = "GENERAL_MEDICINES"
+    if not result["function"]:
+        result["function"] = "Commercial"
+    if not result["cn"]:
+        result["cn"] = "journey"
+    return result
+
+
+def _append_utm_campaign(url: str, utm_campaign: str) -> str:
+    if not utm_campaign or "utm_campaign=" in url.lower():
+        return url
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}utm_campaign={utm_campaign}"
+
+
 def build_qualtrics_cxq_url(params: ConversionParams, rating: int, original_url: str = "") -> str:
     if not original_url:
         return ""
 
     decoded = html_lib.unescape(original_url)
     base = decoded.split("?", 1)[0]
-    ta = _cxq_query_param(decoded, "TA")
-    bu = _cxq_query_param(decoded, "BU")
-    cn = _cxq_query_param(decoded, "CN")
     country = _cxq_query_param(decoded, "Country") or "RU"
     qlang = _cxq_query_param(decoded, "Q_Language") or "RU"
 
-    overrides = any([params.cxq_ta, params.cxq_bu, params.cxq_cn])
-    if params.cxq_ta:
-        ta = params.cxq_ta.replace(" ", "_")
-    if params.cxq_bu:
-        bu = params.cxq_bu.replace(" ", "_")
-    if params.cxq_cn:
-        cn = params.cxq_cn
-
-    if not overrides:
+    if not _cxq_form_input(params):
         return decoded
+
+    fields = _docsfera_cxq_defaults(resolve_cxq_fields(params))
+    ta = _cxq_token(fields["ta"])
+    bu = _cxq_token(fields["bu"])
+    cn = fields["cn"]
 
     return f"{base}?Country={country}&Q_Language={qlang}&TA={ta}&BU={bu}&CN={cn}&R={rating}"
 
 
 def build_cxq_url(params: ConversionParams, rating: int, original_url: str = "") -> str:
     if original_url:
-        decoded = original_url
-        brand = _cxq_query_param(decoded, "Brand")
-        da = _cxq_query_param(decoded, "DA")
-        ta = _cxq_query_param(decoded, "TA")
-        bu = _cxq_query_param(decoded, "BU")
-        cn = _cxq_query_param(decoded, "CN")
-        function = _cxq_query_param(decoded, "Function")
-        franchise = _cxq_query_param(decoded, "Franchise") or brand or da
-
-        overrides = any([
-            params.cxq_brand,
-            params.cxq_da,
-            params.cxq_ta,
-            params.cxq_bu,
-            params.cxq_cn,
-            params.cxq_function,
-        ])
+        decoded = html_lib.unescape(original_url)
+        original_cn = _cxq_query_param(decoded, "CN")
         utm_add = (
             params.utm_campaign
-            and (params.cxq_cn or cn or "").lower() != "promo"
+            and (params.cxq_cn or original_cn or "").lower() != "promo"
             and "utm_campaign" not in decoded.lower()
         )
 
-        if params.cxq_brand:
-            brand = params.cxq_brand.replace(" ", "_")
-        if params.cxq_da:
-            da = params.cxq_da.replace(" ", "_")
-        if params.cxq_ta:
-            ta = params.cxq_ta.replace(" ", "_")
-        if params.cxq_bu:
-            bu = params.cxq_bu.replace(" ", "_")
-        if params.cxq_cn:
-            cn = params.cxq_cn
-        if params.cxq_function:
-            function = params.cxq_function.replace(" ", "_")
-
-        if not franchise:
-            franchise = brand or da
-
-        if not overrides and not utm_add:
+        if not _cxq_form_input(params):
+            if utm_add:
+                return _append_utm_campaign(decoded, params.utm_campaign)
             return decoded
 
-        if not bu:
-            bu = "GENERAL_MEDICINES"
-        if not function:
-            function = "Commercial"
-        if not cn:
-            cn = params.cxq_cn or "journey"
+        fields = _docsfera_cxq_defaults(resolve_cxq_fields(params))
+        brand = _cxq_token(fields["brand"])
+        da = _cxq_token(fields["da"])
+        ta = _cxq_token(fields["ta"])
+        bu = _cxq_token(fields["bu"])
+        function = _cxq_token(fields["function"])
+        cn = fields["cn"]
+        franchise = brand or da
 
         url = (
             f"{CXQ_BASE_URL}?Channel=email&R={rating}&Brand={brand}&DA={da}&TA={ta}"
             f"&Franchise={franchise}&BU={bu}&Function={function}&CN={cn}"
         )
-        effective_cn = (cn or "").lower()
-        if effective_cn != "promo" and params.utm_campaign:
+        if cn.lower() != "promo" and params.utm_campaign:
             url += f"&utm_campaign={params.utm_campaign}"
         return url
 
-    if not params.cxq_brand or not params.cxq_da or not params.cxq_ta:
+    if not _cxq_form_input(params):
         return ""
 
-    brand = params.cxq_brand.replace(" ", "_").upper()
-    da = params.cxq_da.replace(" ", "_").upper()
-    ta = params.cxq_ta.replace(" ", "_").upper()
-    franchise = da
-    bu = (params.cxq_bu or "GENERAL_MEDICINES").replace(" ", "_").upper()
-    function = (params.cxq_function or "Commercial").replace(" ", "_")
-    cn = params.cxq_cn or "journey"
+    fields = _docsfera_cxq_defaults(resolve_cxq_fields(params))
+    if not fields["brand"] or not fields["da"] or not fields["ta"]:
+        return ""
+
+    brand = _cxq_token(fields["brand"])
+    da = _cxq_token(fields["da"])
+    ta = _cxq_token(fields["ta"])
+    bu = _cxq_token(fields["bu"])
+    function = _cxq_token(fields["function"])
+    cn = fields["cn"]
+    franchise = brand or da
     url = (
         f"{CXQ_BASE_URL}?Channel=email&R={rating}&Brand={brand}&DA={da}&TA={ta}"
         f"&Franchise={franchise}&BU={bu}&Function={function}&CN={cn}"

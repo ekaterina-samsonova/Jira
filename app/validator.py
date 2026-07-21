@@ -15,6 +15,7 @@ from app.blocks import (
     BLOCK5_MARKERS,
     BLOCK6_MARKERS,
     MINDBOX_PATTERNS,
+    QUALTRICS_CXQ_HOST_RE,
 )
 
 
@@ -218,7 +219,7 @@ def _validate_block5(report: ValidationReport, html: str) -> None:
         re.IGNORECASE,
     )
     qualtrics_urls = re.findall(
-        r'https?://[^"\']*qualtrics\.com/jfe/form/[^"\']+',
+        rf'https?://{QUALTRICS_CXQ_HOST_RE}/jfe/form/[^"\']+',
         html,
         re.IGNORECASE,
     )
