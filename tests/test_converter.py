@@ -271,4 +271,3 @@ def test_cxq_franchise_fallback_from_form_params():
     url = build_cxq_url(params, 1, original_url="https://docsfera.ru/voting/cxq/?R=1")
     assert "Franchise=PRALUENT" in url
     assert "Brand=PRALUENT" in url
-    assert "Brand=PRALUENT" in url
