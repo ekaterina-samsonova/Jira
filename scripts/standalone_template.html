@@ -680,7 +680,7 @@
       </div>
       <h1 class="header-title">Sanofi | Mindbox → SFMC Converter v3</h1>
       <p class="header-subtitle">Одноколоночный мастер конвертации шаблонов для SFMC.</p>
-      <div class="version-banner">Версия 3.8 — AT1D/Qualtrics CXQ, защита от повторной конвертации SFMC</div>
+      <div class="version-banner">Версия 3.9 — AT1D: склеивает split-приветствие, inline-отписка</div>
     </div>
   </header>
 
@@ -1208,6 +1208,17 @@
         const inner = match[2].toLowerCase();
         const isUnsub = /unsubscribe|otpis/.test(href) || /отпис/.test(inner);
         if (!isUnsub) continue;
+        if (/RedirectTo\(@UnsubscribeUrl\)/i.test(anchor)) {
+          const window = result.slice(Math.max(0, match.index - 800), match.index);
+          if (/ContentBlockbyId/i.test(window)) {
+            const fixed = ensureUnsubscribeAlias(anchor);
+            if (fixed !== anchor) {
+              result = result.slice(0, match.index) + fixed + result.slice(match.index + anchor.length);
+              count += 1;
+            }
+            continue;
+          }
+        }
         const replacement = wrapUnsubscribeAnchor(anchor);
         if (replacement !== anchor) {
           result = result.slice(0, match.index) + replacement + result.slice(match.index + anchor.length);
@@ -1236,12 +1247,27 @@
     }
 
     const MINDBOX_GENDER_GREETING_RE = /@{\s*if\s+Recipient\.IsMale\s*}\s*Уважаемый\s*@{\s*else\s*}\s*Уважаемая\s*@{\s*end\s+if\s*}\s*\$\{Recipient\.FirstAndMiddleName\}\s*!/gi;
-    const SFMC_GREETING_RE = /Здравствуйте,\s*%%=v\(@title\)=%%\s*%%=v\(FirstName\)=%%\s*%%=v\((?:MiddleName|Attribute1)\)=%%\s*!/i;
+    const SFMC_GREETING_RE = /Здравствуйте,\s*%%=v\(@title\)=%%\s*%%=v\(FirstName\)=%%\s*%%=v\((?:MiddleName|Attribute1)\)=%%\s*!?/i;
+    const SPLIT_SFMC_GREETING_RE = /(<h2\b[^>]*>\s*<strong\b[^>]*>\s*)Здравствуйте,\s*(<\/strong>\s*<\/h2>\s*)(<h2\b[^>]*>\s*<strong\b[^>]*>\s*)%%=v\(@title\)=%%\s*%%=v\(FirstName\)=%%\s*%%=v\((?:MiddleName|Attribute1)\)=%%\s*(<\/strong>\s*<\/h2>)/gi;
+
+    function mergeSplitSfmcGreeting(html, greeting) {
+      const updated = html.replace(SPLIT_SFMC_GREETING_RE, (m, open, _mid, _open2, close) => `${open}${greeting}${close}`);
+      return { html: updated, changed: updated !== html };
+    }
 
     function replacePersonalization(html, p) {
       let result = decodeHtml(html);
       const greeting = block4Personalization(p);
       let changed = false;
+
+      const merged = mergeSplitSfmcGreeting(result, greeting);
+      if (merged.changed) {
+        result = merged.html;
+        changed = true;
+      }
+      if (SFMC_GREETING_RE.test(result) && !/@{\s*if\s+Recipient\.IsMale\s*}/i.test(result)) {
+        return { html: changed && result !== html ? result : html, changed: changed && result !== html };
+      }
 
       const genderUpdated = result.replace(MINDBOX_GENDER_GREETING_RE, greeting);
       if (genderUpdated !== result) {

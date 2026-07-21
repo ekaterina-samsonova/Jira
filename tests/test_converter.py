@@ -232,7 +232,7 @@ def test_digest_onco_research_deeplinks_and_cxq_casing():
 
 def test_digest_at1d_qualtrics_and_cta_deeplink():
     html = (
-        Path(__file__).parent / "fixtures" / "Digest_at1d_9_2026_mindbox.html"
+        Path(__file__).parent / "fixtures" / "Digest_at1d_9_2026_b_mindbox.html"
     ).read_text(encoding="utf-8")
     params = ConversionParams(
         cxq_brand="TOUJEO",
@@ -246,7 +246,8 @@ def test_digest_at1d_qualtrics_and_cta_deeplink():
     assert "set @subscriberKey = _subscriberkey" in result
     assert "SET @utm_campaign = __AdditionalEmailAttribute1" in result
     assert 'href="%%view_email_url%%"' in result
-    assert "Здравствуйте, %%=v(@title)=%%" in result
+    assert "Здравствуйте, %%=v(@title)=%% %%=v(FirstName)=%% %%=v(MiddleName)=%%!" in result
+    assert "Здравствуйте,</strong>" not in result
     assert "!important;\">%%=v(@title)" not in result
     assert "Start--Privacy Link goes here" in result
     assert "Изучить материал" in result

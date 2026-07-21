@@ -163,7 +163,14 @@ _QUALTRICS_CXQ_URL_RE = re.compile(
     re.IGNORECASE,
 )
 _SFMC_GREETING_RE = re.compile(
-    r"Здравствуйте,\s*%%=v\(@title\)=%%\s*%%=v\(FirstName\)=%%\s*%%=v\((?:MiddleName|Attribute1)\)=%%\s*!",
+    r"Здравствуйте,\s*%%=v\(@title\)=%%\s*%%=v\(FirstName\)=%%\s*%%=v\((?:MiddleName|Attribute1)\)=%%\s*!?",
+    re.IGNORECASE,
+)
+_SPLIT_SFMC_GREETING_RE = re.compile(
+    r"(<h2\b[^>]*>\s*<strong\b[^>]*>\s*)Здравствуйте,\s*(</strong>\s*</h2>\s*)"
+    r"(<h2\b[^>]*>\s*<strong\b[^>]*>\s*)"
+    r"%%=v\(@title\)=%%\s*%%=v\(FirstName\)=%%\s*%%=v\((?:MiddleName|Attribute1)\)=%%\s*"
+    r"(</strong>\s*</h2>)",
     re.IGNORECASE,
 )
 
@@ -213,10 +220,26 @@ _MINDBOX_GENDER_GREETING_RE = re.compile(
 )
 
 
+def _merge_split_sfmc_greeting(html: str, greeting: str) -> tuple[str, bool]:
+    def repl(match: re.Match[str]) -> str:
+        return f"{match.group(1)}{greeting}{match.group(4)}"
+
+    updated, count = _SPLIT_SFMC_GREETING_RE.subn(repl, html)
+    return updated, count > 0
+
+
 def _replace_personalization(html: str, params: ConversionParams) -> tuple[str, bool]:
     result = html_lib.unescape(html)
     greeting = block4_personalization(params)
     changed = False
+
+    merged, ok = _merge_split_sfmc_greeting(result, greeting)
+    if ok:
+        result = merged
+        changed = True
+
+    if _SFMC_GREETING_RE.search(result) and not re.search(r"@{\s*if\s+Recipient\.IsMale\s*}", result, re.IGNORECASE):
+        return (result, True) if changed and result != html else (html, False)
 
     updated, count = re.subn(_MINDBOX_GENDER_GREETING_RE, greeting, result)
     if count:
@@ -478,6 +501,14 @@ def _replace_unsubscribe(html: str) -> tuple[str, bool]:
         is_unsub = any(token in href for token in ("unsubscribe", "otpis")) or "отпис" in inner
         if not is_unsub:
             continue
+        if "RedirectTo(@UnsubscribeUrl)" in anchor:
+            window = result[max(0, match.start() - 800): match.start()]
+            if "ContentBlockbyId" in window:
+                fixed = _ensure_unsubscribe_alias(anchor)
+                if fixed != anchor:
+                    result = result[: match.start()] + fixed + result[match.end() :]
+                    count += 1
+                continue
         if "RedirectTo(@UnsubscribeUrl)" in anchor and "ContentBlockbyId" in result[max(0, match.start() - 400): match.start()]:
             continue
         replacement = _wrap_unsubscribe_anchor(anchor)
@@ -527,6 +558,10 @@ def convert_mindbox_to_sfmc(html: str, params: ConversionParams) -> ConversionRe
     if "set @subscriberKey = _subscriberkey" in result and "SET @utm_campaign = __AdditionalEmailAttribute1" in result:
         warnings.append(
             "Файл уже содержит блоки SFMC (№1 и №2). Загрузите исходный Mindbox HTML, а не готовый SFMC."
+        )
+    elif "ContentBlockbyId(\"1649\")" in result and _SFMC_GREETING_RE.search(result):
+        warnings.append(
+            "Файл частично уже содержит SFMC-разметку (персонализация/отписка). Конвертер доведёт блоки до финального вида."
         )
 
     before = result
