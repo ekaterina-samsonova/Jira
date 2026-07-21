@@ -15,6 +15,7 @@ from app.blocks import (
     block4_privacy,
     block6_unsubscribe_script,
     build_cxq_url,
+    build_qualtrics_cxq_url,
 )
 
 
@@ -56,6 +57,31 @@ def _replace_view_in_browser(html: str) -> tuple[str, bool]:
         result,
         flags=re.IGNORECASE,
     )
+    if count:
+        return updated, True
+
+    view_section = re.compile(
+        r"(отображается\s+некорректно[\s\S]{0,320}?)(<a\b[^>]*>[\s\S]*?сюда[\s\S]*?</a>)",
+        re.IGNORECASE,
+    )
+
+    def fix_view_in_context(match: re.Match[str]) -> str:
+        nonlocal changed
+        prefix = match.group(1)
+        anchor = match.group(2)
+        if "%%view_email_url%%" in anchor:
+            return match.group(0)
+        changed = True
+        fixed = re.sub(
+            r'\bhref=(["\'])[^"\']*\1',
+            'href="%%view_email_url%%"',
+            anchor,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+        return prefix + fixed
+
+    updated, count = view_section.subn(fix_view_in_context, result, count=1)
     if count:
         return updated, True
 
@@ -128,6 +154,18 @@ _CXQ_URL_RE = re.compile(
     r"https?://docsfera\.ru/voting/cxq/?\?[^\"'\s<>]+",
     re.IGNORECASE,
 )
+_QUALTRICS_CXQ_HREF_RE = re.compile(
+    rf'(<a\b[^>]*\bhref\s*=\s*)(["\'])(https?://[^"\']*qualtrics\.com/jfe/form/[^"\']+)(\2)',
+    re.IGNORECASE,
+)
+_QUALTRICS_CXQ_URL_RE = re.compile(
+    r"https?://[^\"'\s<>]*qualtrics\.com/jfe/form/[^\"'\s<>]+",
+    re.IGNORECASE,
+)
+_SFMC_GREETING_RE = re.compile(
+    r"Здравствуйте,\s*%%=v\(@title\)=%%\s*%%=v\(FirstName\)=%%\s*%%=v\((?:MiddleName|Attribute1)\)=%%\s*!",
+    re.IGNORECASE,
+)
 
 
 def _map_recipient_field(field_name: str, params: ConversionParams) -> str:
@@ -198,23 +236,27 @@ def _replace_personalization(html: str, params: ConversionParams) -> tuple[str, 
     if token_hits:
         changed = True
 
+    if _SFMC_GREETING_RE.search(result):
+        return (result, True) if changed and result != html else (html, False)
+
     if re.search(r"@{\s*if\s+Recipient\.IsMale\s*}", result, re.IGNORECASE):
         return html, False
     if re.search(r"\$\{\s*Recipient\s*\.", result, re.IGNORECASE):
         return html, False
 
-    if changed:
+    if changed and result != html:
         return result, True
 
     fallback_patterns = [
-        r"Здравствуйте[\s\S]*?!",
-        r"Добрый\s+день[\s\S]*?!",
-        r"Здравствуйте[\s\S]{0,800}?(?=</span>|</p>|</td>|</div>|</tr>|$)",
-        r"Добрый\s+день[\s\S]{0,800}?(?=</span>|</p>|</td>|</div>|</tr>|$)",
+        r"Здравствуйте(?:(?!!important)[\s\S])*?!(?!\w)",
+        r"Добрый\s+день(?:(?!!important)[\s\S])*?!(?!\w)",
+        r"Здравствуйте[\s\S]{0,800}?(?=</span>|</p>|</td>|</div>|</tr>|</h[1-6]|$)",
+        r"Добрый\s+день[\s\S]{0,800}?(?=</span>|</p>|</td>|</div>|</tr>|</h[1-6]|$)",
+        r"Уважаем(?:ый|ая)[\s\S]{0,400}?(?=</span>|</p>|</td>|</div>|</tr>|</h[1-6]|$)",
     ]
     for pattern in fallback_patterns:
         updated, count = re.subn(pattern, greeting, result, count=1, flags=re.IGNORECASE)
-        if count:
+        if count and updated != result:
             return updated, True
     return html, False
 
@@ -338,6 +380,58 @@ def _replace_cxq_block(html: str, params: ConversionParams) -> tuple[str, bool]:
     return result, count > 0
 
 
+def _replace_qualtrics_cxq_block(html: str, params: ConversionParams) -> tuple[str, bool]:
+    if not re.search(r"qualtrics\.com/jfe/form", html, re.IGNORECASE):
+        return html, False
+
+    count = 0
+
+    def replace_href(match: re.Match[str]) -> str:
+        nonlocal count
+        original = html_lib.unescape(match.group(3))
+        rating = _extract_cxq_rating(original)
+        new_url = build_qualtrics_cxq_url(params, rating, original_url=original)
+        if new_url and new_url != original:
+            count += 1
+        return f"{match.group(1)}{match.group(2)}{new_url or original}{match.group(4)}"
+
+    result = _QUALTRICS_CXQ_HREF_RE.sub(replace_href, html)
+
+    if count == 0:
+        def replace_bare(match: re.Match[str]) -> str:
+            nonlocal count
+            original = html_lib.unescape(match.group(0))
+            rating = _extract_cxq_rating(original)
+            new_url = build_qualtrics_cxq_url(params, rating, original_url=original)
+            if new_url and new_url != original:
+                count += 1
+            return new_url or original
+
+        result = _QUALTRICS_CXQ_URL_RE.sub(replace_bare, result)
+
+    return result, count > 0
+
+
+def _replace_cxq_links(html: str, params: ConversionParams) -> tuple[str, bool]:
+    uses_docsfera = bool(re.search(r"docsfera\.ru/voting/cxq", html, re.IGNORECASE))
+    uses_qualtrics = bool(re.search(r"qualtrics\.com/jfe/form", html, re.IGNORECASE))
+
+    result = html
+    changed = False
+
+    if uses_docsfera:
+        if params.cxq_cn.lower() != "promo" and not params.utm_campaign:
+            pass
+        result, ok = _replace_cxq_block(result, params)
+        changed = changed or ok
+
+    if uses_qualtrics:
+        result, ok = _replace_qualtrics_cxq_block(result, params)
+        changed = changed or ok
+
+    return result, changed
+
+
 def _ensure_unsubscribe_alias(anchor: str) -> str:
     if 'alias="unsubscribe"' in anchor.lower():
         return anchor
@@ -365,6 +459,8 @@ def _replace_href_with_redirect(anchor: str) -> str:
 def _wrap_unsubscribe_anchor(anchor: str) -> str:
     if "RedirectTo(@UnsubscribeUrl)" in anchor:
         return _ensure_unsubscribe_alias(anchor)
+    if 'alias="unsubscribe"' in anchor.lower() and "ContentBlockbyId" in anchor:
+        return anchor
     wrapped = _ensure_unsubscribe_alias(_replace_href_with_redirect(anchor))
     return f"{block6_unsubscribe_script()}\n{wrapped}"
 
@@ -381,6 +477,8 @@ def _replace_unsubscribe(html: str) -> tuple[str, bool]:
         inner = match.group(2).lower()
         is_unsub = any(token in href for token in ("unsubscribe", "otpis")) or "отпис" in inner
         if not is_unsub:
+            continue
+        if "RedirectTo(@UnsubscribeUrl)" in anchor and "ContentBlockbyId" in result[max(0, match.start() - 400): match.start()]:
             continue
         replacement = _wrap_unsubscribe_anchor(anchor)
         if replacement != anchor:
@@ -426,16 +524,23 @@ def convert_mindbox_to_sfmc(html: str, params: ConversionParams) -> ConversionRe
     changes: list[str] = []
     result = html
 
+    if "set @subscriberKey = _subscriberkey" in result and "SET @utm_campaign = __AdditionalEmailAttribute1" in result:
+        warnings.append(
+            "Файл уже содержит блоки SFMC (№1 и №2). Загрузите исходный Mindbox HTML, а не готовый SFMC."
+        )
+
+    before = result
     result, ok = _replace_personalization(result, params)
-    if ok:
+    if ok and result != before:
         changes.append(f"Обновлена персонализация (режим: {params.personalization_mode})")
-    else:
+    elif not ok:
         warnings.append("Блок №4: не найдено приветствие для замены персонализации")
 
+    before = result
     result, ok = _replace_view_in_browser(result)
-    if ok:
+    if ok and result != before:
         changes.append("Обновлена ссылка «сюда» (блок №3) — href без изменения вёрстки")
-    else:
+    elif not ok:
         warnings.append("Блок №3: не найден текст про некорректное отображение письма")
 
     result, strip_warnings = _strip_mindbox_artifacts(result)
@@ -474,13 +579,15 @@ def convert_mindbox_to_sfmc(html: str, params: ConversionParams) -> ConversionRe
         warnings.append("Блок №4 (deeplink): ссылки docsfera.ru для обёртки не найдены")
 
     if params.cxq_brand:
-        if params.cxq_cn.lower() != "promo" and not params.utm_campaign:
-            warnings.append("Блок №5: utm_campaign обязателен для CXQ, когда CN не promo")
-        result, ok = _replace_cxq_block(result, params)
-        if ok:
+        uses_docsfera = bool(re.search(r"docsfera\.ru/voting/cxq", result, re.IGNORECASE))
+        if uses_docsfera and params.cxq_cn.lower() != "promo" and not params.utm_campaign:
+            warnings.append("Блок №5: utm_campaign обязателен для docsfera CXQ, когда CN не promo")
+        before = result
+        result, ok = _replace_cxq_links(result, params)
+        if ok and result != before:
             changes.append("Обновлены href в CXQ-ссылках (блок №5) — вёрстка сохранена")
-        else:
-            warnings.append("Блок №5: CXQ-ссылки не найдены или параметры уже совпадают — проверьте вручную")
+        elif not re.search(r"docsfera\.ru/voting/cxq|qualtrics\.com/jfe/form", result, re.IGNORECASE):
+            warnings.append("Блок №5: CXQ-ссылки (docsfera или Qualtrics) не найдены")
     else:
         warnings.append("Блок №5: укажите Brand для генерации CXQ-ссылок")
 

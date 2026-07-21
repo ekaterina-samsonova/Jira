@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html as html_lib
 import re
 from dataclasses import dataclass
 
@@ -25,6 +26,7 @@ class ConversionParams:
 CLIENT_ID = "tuedutmcfrbrbaet7gkcgw6xrs2hm3f4"
 PRIVACY_CONTENT_BLOCK_ID = "1649"
 CXQ_BASE_URL = "https://docsfera.ru/voting/cxq/"
+QUALTRICS_CXQ_HOST_RE = r"(?:sanofidigital\.[^/]+|[^/]*qualtrics\.com)"
 UNSUBSCRIBE_URL = "https://docsfera.ru/personal/unsubscribe/"
 
 
@@ -98,6 +100,33 @@ def block4_privacy(privacy_url: str) -> str:
 def _cxq_query_param(url: str, name: str) -> str:
     match = re.search(rf"[?&]{re.escape(name)}=([^&\"']+)", url, re.IGNORECASE)
     return match.group(1) if match else ""
+
+
+def build_qualtrics_cxq_url(params: ConversionParams, rating: int, original_url: str = "") -> str:
+    if not original_url:
+        return ""
+
+    decoded = html_lib.unescape(original_url)
+    base = decoded.split("?", 1)[0]
+    ta = _cxq_query_param(decoded, "TA")
+    bu = _cxq_query_param(decoded, "BU")
+    cn = _cxq_query_param(decoded, "CN") or "journey"
+    country = _cxq_query_param(decoded, "Country") or "RU"
+    qlang = _cxq_query_param(decoded, "Q_Language") or "RU"
+
+    if params.cxq_ta:
+        ta = params.cxq_ta.replace(" ", "_")
+    if params.cxq_bu:
+        bu = params.cxq_bu.replace(" ", "_")
+    if params.cxq_cn:
+        cn = params.cxq_cn
+
+    if not ta:
+        ta = params.cxq_ta.replace(" ", "_") if params.cxq_ta else "CrossTA"
+    if not bu:
+        bu = params.cxq_bu.replace(" ", "_") if params.cxq_bu else "GeneralMedicines"
+
+    return f"{base}?Country={country}&Q_Language={qlang}&TA={ta}&BU={bu}&CN={cn}&R={rating}"
 
 
 def build_cxq_url(params: ConversionParams, rating: int, original_url: str = "") -> str:
@@ -189,7 +218,7 @@ BLOCK2_MARKERS = [
 BLOCK3_MARKERS = ['href="%%view_email_url%%"', ">сюда</a>"]
 BLOCK4_PERSONALIZATION_MARKERS = ["%%=v(@title)=%%", "%%=v(FirstName)=%%"]
 BLOCK4_PRIVACY_MARKERS = ["Start--Privacy Link goes here", 'ContentBlockbyId("1649")']
-BLOCK5_MARKERS = ["docsfera.ru/voting/cxq/", "Channel=email"]
+BLOCK5_MARKERS = ["docsfera.ru/voting/cxq/", "qualtrics.com/jfe/form", "sanofidigital"]
 BLOCK6_MARKERS = [
     "docsfera.ru/personal/unsubscribe/",
     'alias="unsubscribe"',

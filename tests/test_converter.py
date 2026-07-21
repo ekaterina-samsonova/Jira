@@ -230,6 +230,36 @@ def test_digest_onco_research_deeplinks_and_cxq_casing():
     assert "research/shkola_aktualnye_voprosy_transplantatsii" in result
 
 
+def test_digest_at1d_qualtrics_and_cta_deeplink():
+    html = (
+        Path(__file__).parent / "fixtures" / "Digest_at1d_9_2026_mindbox.html"
+    ).read_text(encoding="utf-8")
+    params = ConversionParams(
+        cxq_brand="TOUJEO",
+        cxq_da="TYPE_1_DIABETES",
+        cxq_ta="CrossTA",
+        cxq_bu="GeneralMedicines",
+        cxq_cn="RTE_content_campaign_2023",
+    )
+    result = convert_mindbox_to_sfmc(html, params).html
+
+    assert "set @subscriberKey = _subscriberkey" in result
+    assert "SET @utm_campaign = __AdditionalEmailAttribute1" in result
+    assert 'href="%%view_email_url%%"' in result
+    assert "Здравствуйте, %%=v(@title)=%%" in result
+    assert "!important;\">%%=v(@title)" not in result
+    assert "Start--Privacy Link goes here" in result
+    assert "Изучить материал" in result
+    assert "qualtrics.com/jfe/form" in result
+    assert "CN=RTE_content_campaign_2023" in result
+    assert 'alias="unsubscribe"' in result
+    assert "RedirectTo(@UnsubscribeUrl)" in result
+
+    report = validate_sfmc_html(result)
+    errors = [i for i in report.issues if i.severity == "error"]
+    assert not errors
+
+
 def test_cxq_franchise_fallback_from_form_params():
     params = ConversionParams(
         utm_campaign="Campaign_Test_Q2_2026",
@@ -240,4 +270,5 @@ def test_cxq_franchise_fallback_from_form_params():
     )
     url = build_cxq_url(params, 1, original_url="https://docsfera.ru/voting/cxq/?R=1")
     assert "Franchise=PRALUENT" in url
+    assert "Brand=PRALUENT" in url
     assert "Brand=PRALUENT" in url

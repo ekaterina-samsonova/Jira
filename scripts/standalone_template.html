@@ -680,7 +680,7 @@
       </div>
       <h1 class="header-title">Sanofi | Mindbox → SFMC Converter v3</h1>
       <p class="header-subtitle">Одноколоночный мастер конвертации шаблонов для SFMC.</p>
-      <div class="version-banner">Версия 3.7 — digest-шаблоны: персонализация, CXQ merge, PDF без deeplink</div>
+      <div class="version-banner">Версия 3.8 — AT1D/Qualtrics CXQ, защита от повторной конвертации SFMC</div>
     </div>
   </header>
 
@@ -885,6 +885,7 @@
     const UNSUBSCRIBE_URL = "https://docsfera.ru/personal/unsubscribe/";
 
     let selectedFile = null;
+    let uploadedHtmlSnippet = "";
     let convertedHtml = null;
     let outputFilename = "email_SFMC.html";
 
@@ -987,6 +988,14 @@
 
       const accessibilityUpdated = html.replace(/\bhref=(["'])\$\{Message\.AccessibilityLink\}\1/gi, 'href="%%view_email_url%%"');
       if (accessibilityUpdated !== html) return { html: accessibilityUpdated, changed: true };
+
+      const viewSection = /(отображается\s+некорректно[\s\S]{0,320}?)(<a\b[^>]*>[\s\S]*?сюда[\s\S]*?<\/a>)/i;
+      const sectionUpdated = html.replace(viewSection, (full, prefix, anchor) => {
+        if (/%%view_email_url%%/i.test(anchor)) return full;
+        changed = true;
+        return prefix + anchor.replace(/\bhref=(["'])[^"']*\1/i, 'href="%%view_email_url%%"');
+      });
+      if (changed) return { html: sectionUpdated, changed: true };
 
       const updated = html.replace(/<a\b[^>]*>[\s\S]*?сюда[\s\S]*?<\/a>/i, (anchor) => {
         if (/%%view_email_url%%/i.test(anchor)) return anchor;
@@ -1111,6 +1120,23 @@
       return match ? match[1] : "";
     }
 
+    function buildQualtricsCxqUrl(p, rating, originalUrl = "") {
+      if (!originalUrl) return "";
+      const decoded = originalUrl;
+      const base = decoded.split("?")[0];
+      let ta = cxqQueryParam(decoded, "TA");
+      let bu = cxqQueryParam(decoded, "BU");
+      let cn = cxqQueryParam(decoded, "CN") || "journey";
+      const country = cxqQueryParam(decoded, "Country") || "RU";
+      const qlang = cxqQueryParam(decoded, "Q_Language") || "RU";
+      if (p.cxq_ta) ta = p.cxq_ta.replace(/ /g, "_");
+      if (p.cxq_bu) bu = p.cxq_bu.replace(/ /g, "_");
+      if (p.cxq_cn) cn = p.cxq_cn;
+      if (!ta) ta = p.cxq_ta ? p.cxq_ta.replace(/ /g, "_") : "CrossTA";
+      if (!bu) bu = p.cxq_bu ? p.cxq_bu.replace(/ /g, "_") : "GeneralMedicines";
+      return `${base}?Country=${country}&Q_Language=${qlang}&TA=${ta}&BU=${bu}&CN=${cn}&R=${rating}`;
+    }
+
     function buildCxqUrl(p, rating, originalUrl = "") {
       if (originalUrl) {
         const decoded = originalUrl;
@@ -1210,6 +1236,7 @@
     }
 
     const MINDBOX_GENDER_GREETING_RE = /@{\s*if\s+Recipient\.IsMale\s*}\s*Уважаемый\s*@{\s*else\s*}\s*Уважаемая\s*@{\s*end\s+if\s*}\s*\$\{Recipient\.FirstAndMiddleName\}\s*!/gi;
+    const SFMC_GREETING_RE = /Здравствуйте,\s*%%=v\(@title\)=%%\s*%%=v\(FirstName\)=%%\s*%%=v\((?:MiddleName|Attribute1)\)=%%\s*!/i;
 
     function replacePersonalization(html, p) {
       let result = decodeHtml(html);
@@ -1233,18 +1260,19 @@
         }
       }
       if (tokenHits) changed = true;
+      if (SFMC_GREETING_RE.test(result)) return { html: changed && result !== html ? result : html, changed: changed && result !== html };
       if (/@{\s*if\s+Recipient\.IsMale\s*}/i.test(result)) return { html, changed: false };
       if (/\$\{\s*Recipient\s*\./i.test(result)) return { html, changed: false };
-      if (changed) return { html: result, changed: true };
+      if (changed && result !== html) return { html: result, changed: true };
       for (const pattern of [
-        /Здравствуйте[\s\S]*?!/i,
-        /Добрый\s+день[\s\S]*?!/i,
-        /Здравствуйте[\s\S]{0,800}?(?=<\/span>|<\/p>|<\/td>|<\/div>|<\/tr>|$)/i,
-        /Добрый\s+день[\s\S]{0,800}?(?=<\/span>|<\/p>|<\/td>|<\/div>|<\/tr>|$)/i,
+        /Здравствуйте(?:(?!!important)[\s\S])*?!(?!\w)/i,
+        /Добрый\s+день(?:(?!!important)[\s\S])*?!(?!\w)/i,
+        /Здравствуйте[\s\S]{0,800}?(?=<\/span>|<\/p>|<\/td>|<\/div>|<\/tr>|<\/h[1-6]|$)/i,
+        /Добрый\s+день[\s\S]{0,800}?(?=<\/span>|<\/p>|<\/td>|<\/div>|<\/tr>|<\/h[1-6]|$)/i,
+        /Уважаем(?:ый|ая)[\s\S]{0,400}?(?=<\/span>|<\/p>|<\/td>|<\/div>|<\/tr>|<\/h[1-6]|$)/i,
       ]) {
-        if (pattern.test(result)) {
-          return { html: result.replace(pattern, greeting), changed: true };
-        }
+        const next = result.replace(pattern, greeting);
+        if (next !== result) return { html: next, changed: true };
       }
       return { html, changed: false };
     }
@@ -1256,7 +1284,44 @@
       return 1;
     }
 
+    function replaceQualtricsCxqLinks(html, p) {
+      if (!/qualtrics\.com\/jfe\/form/i.test(html)) return { html, changed: false };
+      let count = 0;
+      const hrefRe = /(<a\b[^>]*\bhref\s*=\s*)(["'])(https?:\/\/[^"']*qualtrics\.com\/jfe\/form\/[^"']*)(\2)/gi;
+      let result = html.replace(hrefRe, (match, open, quote, url, close) => {
+        const rating = extractCxqRating(url);
+        const next = buildQualtricsCxqUrl(p, rating, decodeHtml(url));
+        if (next && next !== decodeHtml(url)) count += 1;
+        return `${open}${quote}${next || url}${close}`;
+      });
+      if (!count) {
+        result = result.replace(/https?:\/\/[^"'\s<>]*qualtrics\.com\/jfe\/form\/[^"'\s<>]+/gi, (url) => {
+          const rating = extractCxqRating(url);
+          const next = buildQualtricsCxqUrl(p, rating, decodeHtml(url));
+          if (next && next !== decodeHtml(url)) count += 1;
+          return next || url;
+        });
+      }
+      return { html: result, changed: count > 0 };
+    }
+
     function replaceCxqLinks(html, p) {
+      let result = html;
+      let changed = false;
+      if (/docsfera\.ru\/voting\/cxq/i.test(result)) {
+        const docsfera = replaceDocsferaCxqLinks(result, p);
+        result = docsfera.html;
+        changed = changed || docsfera.changed;
+      }
+      if (/qualtrics\.com\/jfe\/form/i.test(result)) {
+        const qualtrics = replaceQualtricsCxqLinks(result, p);
+        result = qualtrics.html;
+        changed = changed || qualtrics.changed;
+      }
+      return { html: result, changed };
+    }
+
+    function replaceDocsferaCxqLinks(html, p) {
       if (!/docsfera\.ru\/voting\/cxq/i.test(html)) return { html, changed: false };
       let count = 0;
       const hrefRe = /(<a\b[^>]*\bhref\s*=\s*)(["'])(https?:\/\/docsfera\.ru\/voting\/cxq\/?\?[^"']*)(\2)/gi;
@@ -1282,15 +1347,21 @@
       const changes = [];
       let result = html;
 
+      if (result.includes("set @subscriberKey = _subscriberkey") && result.includes("SET @utm_campaign = __AdditionalEmailAttribute1")) {
+        warnings.push("Файл уже содержит блоки SFMC (№1 и №2). Загрузите исходный Mindbox HTML, а не готовый SFMC.");
+      }
+
+      let before = result;
       const persResult = replacePersonalization(result, p);
       result = persResult.html;
-      if (persResult.changed) changes.push(`Обновлена персонализация (режим: ${p.personalization_mode})`);
-      else warnings.push("Блок №4: не найдено приветствие для замены персонализации");
+      if (persResult.changed && result !== before) changes.push(`Обновлена персонализация (режим: ${p.personalization_mode})`);
+      else if (!persResult.changed) warnings.push("Блок №4: не найдено приветствие для замены персонализации");
 
+      before = result;
       const viewResult = replaceViewInBrowser(result);
       result = viewResult.html;
-      if (viewResult.changed) changes.push("Обновлена ссылка «сюда» (блок №3) — href без изменения вёрстки");
-      else warnings.push("Блок №3: не найден текст про некорректное отображение");
+      if (viewResult.changed && result !== before) changes.push("Обновлена ссылка «сюда» (блок №3) — href без изменения вёрстки");
+      else if (!viewResult.changed) warnings.push("Блок №3: не найден текст про некорректное отображение");
 
       result = result.replace(/<!--\s*Mindbox[\s\S]*?-->/gi, "");
       result = result.replace(/<script[^>]*mindbox[^>]*>[\s\S]*?<\/script>/gi, "");
@@ -1317,15 +1388,17 @@
       }
 
       if (p.cxq_brand) {
-        if (p.cxq_cn.toLowerCase() !== "promo" && !p.utm_campaign) {
-          warnings.push("Блок №5: utm_campaign обязателен для CXQ, когда CN не promo");
+        const usesDocsfera = /docsfera\.ru\/voting\/cxq/i.test(result);
+        if (usesDocsfera && p.cxq_cn.toLowerCase() !== "promo" && !p.utm_campaign) {
+          warnings.push("Блок №5: utm_campaign обязателен для docsfera CXQ, когда CN не promo");
         }
+        before = result;
         const cxqResult = replaceCxqLinks(result, p);
         result = cxqResult.html;
-        if (cxqResult.changed) {
+        if (cxqResult.changed && result !== before) {
           changes.push("Обновлены href в CXQ-ссылках (блок №5) — вёрстка сохранена");
-        } else {
-          warnings.push("Блок №5: CXQ-ссылки не найдены или параметры уже совпадают");
+        } else if (!/docsfera\.ru\/voting\/cxq|qualtrics\.com\/jfe\/form/i.test(result)) {
+          warnings.push("Блок №5: CXQ-ссылки (docsfera или Qualtrics) не найдены");
         }
       } else {
         warnings.push("Блок №5: укажите Brand");
@@ -1356,21 +1429,24 @@
       req("Блок №4", ["%%=v(@title)=%%", "%%=v(FirstName)=%%"]);
       req("Блок №6", ["docsfera.ru/personal/unsubscribe/", 'alias="unsubscribe"', "RedirectTo(@UnsubscribeUrl)"]);
 
-      if (!html.includes("docsfera.ru/voting/cxq/")) add("Блок №5", "error", "CXQ-блок не найден", "Добавьте ссылки docsfera.ru/voting/cxq/");
-      else {
-        const urls = html.match(/https?:\/\/docsfera\.ru\/voting\/cxq\/\?[^"'\s<>]+/gi) || [];
+      const docsferaUrls = html.match(/https?:\/\/docsfera\.ru\/voting\/cxq\/\?[^"'\s<>]+/gi) || [];
+      const qualtricsUrls = html.match(/https?:\/\/[^"'\s<>]*qualtrics\.com\/jfe\/form\/[^"'\s<>]+/gi) || [];
+      if (!docsferaUrls.length && !qualtricsUrls.length) {
+        add("Блок №5", "error", "CXQ-блок не найден", "Добавьте ссылки docsfera.ru/voting/cxq/ или Qualtrics");
+      } else {
         const ratings = new Set();
-        urls.forEach((url) => {
+        docsferaUrls.forEach((url) => {
           const rm = url.match(/[?&]R=(\d)/i);
           if (rm) ratings.add(Number(rm[1]));
           const params = new URLSearchParams(url.split("?")[1] || "");
           const cn = (params.get("CN") || "").toLowerCase();
           if (cn !== "promo" && !params.get("utm_campaign")) {
-            add("Блок №5 (CXQ)", "error", "В CXQ-ссылке отсутствует utm_campaign", "Добавьте utm_campaign, если CN не promo", url.slice(0, 200));
+            add("Блок №5 (CXQ)", "error", "В docsfera CXQ-ссылке отсутствует utm_campaign", "Добавьте utm_campaign, если CN не promo", url.slice(0, 200));
           }
-          if (cn === "promo" && params.get("utm_campaign")) {
-            add("Блок №5 (CXQ)", "error", "utm_campaign не должен быть в CXQ-ссылке при CN=promo", "Уберите utm_campaign для promo", url.slice(0, 200));
-          }
+        });
+        qualtricsUrls.forEach((url) => {
+          const rm = url.match(/[?&]R=(\d)/i);
+          if (rm) ratings.add(Number(rm[1]));
         });
         if (ratings.size < 7) add("Блок №5", "warning", `Найдено оценок R: ${[...ratings].sort()} — нужно 7`, "Каждая кнопка R=1..7");
       }
@@ -1415,7 +1491,12 @@
     }
 
     function isUtmCampaignRequired() {
-      return document.getElementById("cxq_cn").value.trim().toLowerCase() !== "promo";
+      const cn = document.getElementById("cxq_cn").value.trim().toLowerCase();
+      if (cn === "promo") return false;
+      if (/qualtrics\.com\/jfe\/form/i.test(uploadedHtmlSnippet) && !/docsfera\.ru\/voting\/cxq/i.test(uploadedHtmlSnippet)) {
+        return false;
+      }
+      return true;
     }
 
     function updateUtmRequiredState() {
@@ -1468,6 +1549,8 @@
       if (!file) return;
       selectedFile = file;
       convertedHtml = null;
+      uploadedHtmlSnippet = "";
+      file.text().then((text) => { uploadedHtmlSnippet = text; updateUtmRequiredState(); }).catch(() => {});
       els.downloadBtn.disabled = true;
       els.fileName.textContent = file.name;
       els.fileMeta.textContent = `${formatSize(file.size)} · ${file.type || "HTML"}`;

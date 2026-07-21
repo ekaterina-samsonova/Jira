@@ -188,33 +188,68 @@ def _validate_cxq_url(report: ValidationReport, url: str) -> None:
         )
 
 
-def _validate_block5(report: ValidationReport, html: str) -> None:
-    if not any(marker in html for marker in BLOCK5_MARKERS):
+def _validate_qualtrics_cxq_url(report: ValidationReport, url: str) -> None:
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query)
+    required = ["Country", "Q_Language", "TA", "BU", "CN", "R"]
+    missing = [p for p in required if p not in params or not params[p][0]]
+    if missing:
         report.add(
-            "Блок №5 (CXQ)",
+            "Блок №5 (Qualtrics CXQ)",
             "error",
-            "CXQ-блок не найден",
-            hint="Добавьте секцию «Насколько информация...» со ссылками docsfera.ru/voting/cxq/",
+            f"В Qualtrics-ссылке отсутствуют параметры: {', '.join(missing)}",
+            hint="Проверьте TA, BU, CN и R в кнопках оценки",
+            snippet=url[:200],
         )
-        return
+    rating = params.get("R", [""])[0]
+    if rating and (not rating.isdigit() or not (1 <= int(rating) <= 7)):
+        report.add(
+            "Блок №5 (Qualtrics CXQ)",
+            "error",
+            f"Параметр R должен быть от 1 до 7, сейчас: {rating}",
+            snippet=url[:200],
+        )
 
-    urls = re.findall(
+
+def _validate_block5(report: ValidationReport, html: str) -> None:
+    docsfera_urls = re.findall(
         r'https?://docsfera\.ru/voting/cxq/?\?[^"\']+',
         html,
         re.IGNORECASE,
     )
-    if not urls:
-        report.add(
-            "Блок №5 (CXQ)",
-            "error",
-            "Ссылки CXQ не найдены",
-            hint="Проверьте href в кнопках оценки 1–7",
-        )
+    qualtrics_urls = re.findall(
+        r'https?://[^"\']*qualtrics\.com/jfe/form/[^"\']+',
+        html,
+        re.IGNORECASE,
+    )
+
+    if not docsfera_urls and not qualtrics_urls:
+        if not any(marker in html for marker in BLOCK5_MARKERS):
+            report.add(
+                "Блок №5 (CXQ)",
+                "error",
+                "CXQ-блок не найден",
+                hint="Добавьте секцию «Насколько информация...» со ссылками docsfera.ru/voting/cxq/ или Qualtrics",
+            )
+        else:
+            report.add(
+                "Блок №5 (CXQ)",
+                "error",
+                "Ссылки CXQ не найдены",
+                hint="Проверьте href в кнопках оценки 1–7",
+            )
         return
 
-    ratings = set()
-    for url in urls:
+    ratings: set[int] = set()
+
+    for url in docsfera_urls:
         _validate_cxq_url(report, url)
+        match = re.search(r"[?&]R=(\d)", url, re.IGNORECASE)
+        if match:
+            ratings.add(int(match.group(1)))
+
+    for url in qualtrics_urls:
+        _validate_qualtrics_cxq_url(report, url)
         match = re.search(r"[?&]R=(\d)", url, re.IGNORECASE)
         if match:
             ratings.add(int(match.group(1)))
