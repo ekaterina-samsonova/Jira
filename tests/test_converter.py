@@ -184,3 +184,60 @@ def test_validate_after_conversion_passes():
     report = validate_sfmc_html(converted)
     errors = [i for i in report.issues if i.severity == "error"]
     assert not errors
+
+
+def test_digest_immuno_gender_greeting_and_cxq():
+    html = (
+        Path(__file__).parent / "fixtures" / "Digest_immuno_14_2026_mindbox_8d26.html"
+    ).read_text(encoding="utf-8")
+    params = ConversionParams(
+        cxq_brand="DUPIXENT",
+        cxq_da="CHRONIC_RHINOSINUSITIS_WITH_NASAL_POLYPS(CRSwNP)",
+        cxq_ta="IMMUNOLOGY",
+        cxq_bu="SPECIALTY_CARE",
+        cxq_cn="promo",
+    )
+    result = convert_mindbox_to_sfmc(html, params).html
+
+    assert "Здравствуйте, %%=v(@title)=%% %%=v(FirstName)=%% %%=v(MiddleName)=%%!" in result
+    assert "Recipient.IsMale" not in result
+    assert '${Recipient.FirstAndMiddleName}' not in result
+    assert 'href="https://docsfera.ru/upload/ohlp/open-no-index/ohlp-dupilumab-2026.pdf"' in result
+    assert "Function=Commercial&CN=promo" in result
+    assert "Function=Medical&CN=promo" in result
+    assert "utm_campaign" not in result.split("voting/cxq", 1)[1][:800]
+    assert 'alias="unsubscribe" href="%%=RedirectTo(@UnsubscribeUrl)=%%"' in result
+
+
+def test_digest_onco_research_deeplinks_and_cxq_casing():
+    html = (
+        Path(__file__).parent / "fixtures" / "Digest_onco_16_2026_mindbox_daa7.html"
+    ).read_text(encoding="utf-8")
+    params = ConversionParams(
+        cxq_brand="REZTIREG",
+        cxq_da="chronic_GVHD",
+        cxq_ta="TRANSPLANT",
+        cxq_bu="SPECIALTY_CARE",
+        cxq_cn="promo",
+    )
+    result = convert_mindbox_to_sfmc(html, params).html
+
+    assert "Здравствуйте, %%=v(@title)=%%" in result
+    assert "DA=chronic_GVHD" in result
+    assert "Franchise=TRANSPLANT" in result
+    assert result.count("RedirectTo(@UnsubscribeUrl)") >= 2
+    assert "research/novosti_8_go_mezhdunarodnogo_simpoziuma" in result
+    assert "research/shkola_aktualnye_voprosy_transplantatsii" in result
+
+
+def test_cxq_franchise_fallback_from_form_params():
+    params = ConversionParams(
+        utm_campaign="Campaign_Test_Q2_2026",
+        cxq_brand="PRALUENT",
+        cxq_da="DYSLIPIDEMIA",
+        cxq_ta="CARDIOLOGY",
+        cxq_cn="journey",
+    )
+    url = build_cxq_url(params, 1, original_url="https://docsfera.ru/voting/cxq/?R=1")
+    assert "Franchise=PRALUENT" in url
+    assert "Brand=PRALUENT" in url

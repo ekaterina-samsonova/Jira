@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 
@@ -94,7 +95,44 @@ def block4_privacy(privacy_url: str) -> str:
                             <!-----END---Privacy Link goes here ---->"""
 
 
-def build_cxq_url(params: ConversionParams, rating: int) -> str:
+def _cxq_query_param(url: str, name: str) -> str:
+    match = re.search(rf"[?&]{re.escape(name)}=([^&\"']+)", url, re.IGNORECASE)
+    return match.group(1) if match else ""
+
+
+def build_cxq_url(params: ConversionParams, rating: int, original_url: str = "") -> str:
+    if original_url:
+        decoded = original_url
+        brand = _cxq_query_param(decoded, "Brand")
+        da = _cxq_query_param(decoded, "DA")
+        ta = _cxq_query_param(decoded, "TA")
+        bu = _cxq_query_param(decoded, "BU")
+        cn = _cxq_query_param(decoded, "CN") or "journey"
+        function = _cxq_query_param(decoded, "Function") or params.cxq_function.replace(" ", "_")
+        franchise = _cxq_query_param(decoded, "Franchise") or brand or da
+
+        if params.cxq_brand:
+            brand = params.cxq_brand.replace(" ", "_")
+        if params.cxq_da:
+            da = params.cxq_da.replace(" ", "_")
+        if params.cxq_ta:
+            ta = params.cxq_ta.replace(" ", "_")
+        if params.cxq_bu:
+            bu = params.cxq_bu.replace(" ", "_")
+        if params.cxq_cn:
+            cn = params.cxq_cn
+
+        if not franchise:
+            franchise = brand or da
+
+        url = (
+            f"{CXQ_BASE_URL}?Channel=email&R={rating}&Brand={brand}&DA={da}&TA={ta}"
+            f"&Franchise={franchise}&BU={bu}&Function={function}&CN={cn}"
+        )
+        if cn.lower() != "promo" and params.utm_campaign:
+            url += f"&utm_campaign={params.utm_campaign}"
+        return url
+
     brand = params.cxq_brand.replace(" ", "_").upper()
     da = params.cxq_da.replace(" ", "_").upper()
     ta = params.cxq_ta.replace(" ", "_").upper()

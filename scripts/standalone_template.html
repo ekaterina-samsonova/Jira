@@ -680,7 +680,7 @@
       </div>
       <h1 class="header-title">Sanofi | Mindbox → SFMC Converter v3</h1>
       <p class="header-subtitle">Одноколоночный мастер конвертации шаблонов для SFMC.</p>
-      <div class="version-banner">Версия 3.6 — надёжнее CXQ и персонализация Mindbox</div>
+      <div class="version-banner">Версия 3.7 — digest-шаблоны: персонализация, CXQ merge, PDF без deeplink</div>
     </div>
   </header>
 
@@ -976,12 +976,17 @@
       const normalized = url.replace(/\/$/, "");
       const lower = normalized.toLowerCase();
       if (lower === "https://docsfera.ru" || lower === "http://docsfera.ru") return false;
-      return !/(voting\/cxq|personal\/unsubscribe|unsubscribe)/i.test(lower);
+      if (/(voting\/cxq|personal\/unsubscribe|unsubscribe)/i.test(lower)) return false;
+      if (lower.includes("/upload/") || lower.endsWith(".pdf")) return false;
+      return true;
     }
 
     function replaceViewInBrowser(html) {
       const fallback = '<a href="%%view_email_url%%" target="_blank">сюда</a>';
       let changed = false;
+
+      const accessibilityUpdated = html.replace(/\bhref=(["'])\$\{Message\.AccessibilityLink\}\1/gi, 'href="%%view_email_url%%"');
+      if (accessibilityUpdated !== html) return { html: accessibilityUpdated, changed: true };
 
       const updated = html.replace(/<a\b[^>]*>[\s\S]*?сюда[\s\S]*?<\/a>/i, (anchor) => {
         if (/%%view_email_url%%/i.test(anchor)) return anchor;
@@ -1101,8 +1106,37 @@
       return `<!-----Start--Privacy Link goes here---- >\n%%[\nset @RedirectUri='${url}'\nset @ClientId='${CLIENT_ID}'\nset @Website='https://docsfera.ru/'\n]%%\n%%=ContentBlockbyId("${PRIVACY_CONTENT_BLOCK_ID}")=%%\n<!-----END---Privacy Link goes here ---->`;
     }
 
-    function buildCxqUrl(p, rating) {
-      const enc = (v) => encodeURIComponent(String(v).replace(/ /g, "_").toUpperCase());
+    function cxqQueryParam(url, name) {
+      const match = url.match(new RegExp(`[?&]${name}=([^&"']+)`, "i"));
+      return match ? match[1] : "";
+    }
+
+    function buildCxqUrl(p, rating, originalUrl = "") {
+      if (originalUrl) {
+        const decoded = originalUrl;
+        let brand = cxqQueryParam(decoded, "Brand");
+        let da = cxqQueryParam(decoded, "DA");
+        let ta = cxqQueryParam(decoded, "TA");
+        let bu = cxqQueryParam(decoded, "BU");
+        let cn = cxqQueryParam(decoded, "CN") || "journey";
+        let fn = cxqQueryParam(decoded, "Function") || p.cxq_function.replace(/ /g, "_");
+        let franchise = cxqQueryParam(decoded, "Franchise") || brand || da;
+
+        if (p.cxq_brand) brand = p.cxq_brand.replace(/ /g, "_");
+        if (p.cxq_da) da = p.cxq_da.replace(/ /g, "_");
+        if (p.cxq_ta) ta = p.cxq_ta.replace(/ /g, "_");
+        if (p.cxq_bu) bu = p.cxq_bu.replace(/ /g, "_");
+        if (p.cxq_cn) cn = p.cxq_cn;
+        if (!franchise) franchise = brand || da;
+
+        let url = `${CXQ_BASE_URL}?Channel=email&R=${rating}&Brand=${brand}&DA=${da}&TA=${ta}&Franchise=${franchise}&BU=${bu}&Function=${fn}&CN=${cn}`;
+        if (cn.toLowerCase() !== "promo" && p.utm_campaign) {
+          url += `&utm_campaign=${encodeURIComponent(p.utm_campaign)}`;
+        }
+        return url;
+      }
+
+      const enc = (v) => String(v).replace(/ /g, "_").toUpperCase();
       let url = `${CXQ_BASE_URL}?Channel=email&R=${rating}&Brand=${enc(p.cxq_brand)}&DA=${enc(p.cxq_da)}&TA=${enc(p.cxq_ta)}&Franchise=${enc(p.cxq_da)}&BU=${enc(p.cxq_bu)}&Function=${encodeURIComponent(p.cxq_function.replace(/ /g, "_"))}&CN=${encodeURIComponent(p.cxq_cn)}`;
       if (p.cxq_cn.toLowerCase() !== "promo" && p.utm_campaign) {
         url += `&utm_campaign=${encodeURIComponent(p.utm_campaign)}`;
@@ -1175,8 +1209,19 @@
       return html.slice(0, idx) + "\n" + snippet + "\n" + html.slice(idx);
     }
 
+    const MINDBOX_GENDER_GREETING_RE = /@{\s*if\s+Recipient\.IsMale\s*}\s*Уважаемый\s*@{\s*else\s*}\s*Уважаемая\s*@{\s*end\s+if\s*}\s*\$\{Recipient\.FirstAndMiddleName\}\s*!/gi;
+
     function replacePersonalization(html, p) {
       let result = decodeHtml(html);
+      const greeting = block4Personalization(p);
+      let changed = false;
+
+      const genderUpdated = result.replace(MINDBOX_GENDER_GREETING_RE, greeting);
+      if (genderUpdated !== result) {
+        result = genderUpdated;
+        changed = true;
+      }
+
       let tokenHits = 0;
       for (const [pattern, replacement] of personalizationFieldMap(p)) {
         const updated = typeof replacement === "function"
@@ -1187,10 +1232,10 @@
           result = updated;
         }
       }
-      if (tokenHits) return { html: result, changed: true };
+      if (tokenHits) changed = true;
+      if (/@{\s*if\s+Recipient\.IsMale\s*}/i.test(result)) return { html, changed: false };
       if (/\$\{\s*Recipient\s*\./i.test(result)) return { html, changed: false };
-
-      const greeting = block4Personalization(p);
+      if (changed) return { html: result, changed: true };
       for (const pattern of [
         /Здравствуйте[\s\S]*?!/i,
         /Добрый\s+день[\s\S]*?!/i,
@@ -1217,15 +1262,15 @@
       const hrefRe = /(<a\b[^>]*\bhref\s*=\s*)(["'])(https?:\/\/docsfera\.ru\/voting\/cxq\/?\?[^"']*)(\2)/gi;
       let result = html.replace(hrefRe, (match, open, quote, url, close) => {
         const rating = extractCxqRating(url);
-        const next = buildCxqUrl(p, rating);
-        if (next !== url) count += 1;
+        const next = buildCxqUrl(p, rating, decodeHtml(url));
+        if (next !== decodeHtml(url)) count += 1;
         return `${open}${quote}${next}${close}`;
       });
       if (!count) {
         result = result.replace(/https?:\/\/docsfera\.ru\/voting\/cxq\/?\?[^"'\s<>]+/gi, (url) => {
           const rating = extractCxqRating(url);
-          const next = buildCxqUrl(p, rating);
-          if (next !== url) count += 1;
+          const next = buildCxqUrl(p, rating, decodeHtml(url));
+          if (next !== decodeHtml(url)) count += 1;
           return next;
         });
       }
@@ -1242,9 +1287,15 @@
       if (persResult.changed) changes.push(`Обновлена персонализация (режим: ${p.personalization_mode})`);
       else warnings.push("Блок №4: не найдено приветствие для замены персонализации");
 
+      const viewResult = replaceViewInBrowser(result);
+      result = viewResult.html;
+      if (viewResult.changed) changes.push("Обновлена ссылка «сюда» (блок №3) — href без изменения вёрстки");
+      else warnings.push("Блок №3: не найден текст про некорректное отображение");
+
       result = result.replace(/<!--\s*Mindbox[\s\S]*?-->/gi, "");
       result = result.replace(/<script[^>]*mindbox[^>]*>[\s\S]*?<\/script>/gi, "");
       result = result.replace(/\$\{Message\.[^}]+\}/gi, "");
+      result = result.replace(/<custom\s+name="opencounter"\s+type="tracking"\s*\/?>/gi, "");
 
       if (!result.includes("set @subscriberKey = _subscriberkey")) {
         result = insertBeforeDoctype(result, block1(p));
@@ -1254,13 +1305,8 @@
       if (!result.includes("SET @utm_campaign = __AdditionalEmailAttribute1")) {
         const updated = insertAfterHead(result, block2());
         if (updated === result) warnings.push("Не найден </head> — блок №2 не вставлен");
-        else { result = updated; changes.push("Добавлен блок №2"); }
+        else { result = updated; changes.push("Добавлен блок №2 (метаданные кампании и opencounter)"); }
       }
-
-      const viewResult = replaceViewInBrowser(result);
-      result = viewResult.html;
-      if (viewResult.changed) changes.push("Обновлена ссылка «сюда» (блок №3) — href без изменения вёрстки");
-      else warnings.push("Блок №3: не найден текст про некорректное отображение");
 
       const deeplinkResult = applyAllDocsferaDeeplinks(result);
       result = deeplinkResult.html;

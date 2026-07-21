@@ -48,6 +48,16 @@ def _insert_after_head(html: str, snippet: str) -> tuple[str, bool]:
 
 def _replace_view_in_browser(html: str) -> tuple[str, bool]:
     changed = False
+    result = html
+
+    updated, count = re.subn(
+        r'\bhref=(["\'])\$\{Message\.AccessibilityLink\}\1',
+        'href="%%view_email_url%%"',
+        result,
+        flags=re.IGNORECASE,
+    )
+    if count:
+        return updated, True
 
     def fix_view_link(match: re.Match[str]) -> str:
         nonlocal changed
@@ -66,7 +76,7 @@ def _replace_view_in_browser(html: str) -> tuple[str, bool]:
     updated, count = re.subn(
         r"<a\b[^>]*>[\s\S]*?сюда[\s\S]*?</a>",
         fix_view_link,
-        html,
+        result,
         count=1,
         flags=re.IGNORECASE,
     )
@@ -84,26 +94,25 @@ def _replace_view_in_browser(html: str) -> tuple[str, bool]:
             rf"\1{link}",
         ),
     ]
-    result = html
     for pattern, repl in patterns:
         updated_text, hit_count = re.subn(pattern, repl, result, count=1, flags=re.IGNORECASE)
         if hit_count:
             return updated_text, True
 
-    if 'href="%%view_email_url%%"' not in html and re.search(
-        r"отображается\s+некорректно", html, re.IGNORECASE
+    if 'href="%%view_email_url%%"' not in result and re.search(
+        r"отображается\s+некорректно", result, re.IGNORECASE
     ):
         updated_text, hit_count = re.subn(
             r"(отображается\s+некорректно[^<]{0,120}?)(?:нажмите\s*)?(?:<a\b[^>]*>[^<]*</a>|сюда|здесь)",
             rf"\1{link}",
-            html,
+            result,
             count=1,
             flags=re.IGNORECASE,
         )
         if hit_count:
             return updated_text, True
 
-    return html, changed
+    return result, changed
 
 
 def _extract_privacy_url(html: str) -> str:
@@ -159,8 +168,23 @@ def _personalization_replacements(params: ConversionParams) -> list[tuple[str, s
     ]
 
 
+_MINDBOX_GENDER_GREETING_RE = re.compile(
+    r"@{\s*if\s+Recipient\.IsMale\s*}\s*Уважаемый\s*@{\s*else\s*}\s*Уважаемая\s*@{\s*end\s+if\s*}\s*"
+    r"\$\{Recipient\.FirstAndMiddleName\}\s*!",
+    re.IGNORECASE,
+)
+
+
 def _replace_personalization(html: str, params: ConversionParams) -> tuple[str, bool]:
     result = html_lib.unescape(html)
+    greeting = block4_personalization(params)
+    changed = False
+
+    updated, count = re.subn(_MINDBOX_GENDER_GREETING_RE, greeting, result)
+    if count:
+        result = updated
+        changed = True
+
     token_hits = 0
     for pattern, replacement in _personalization_replacements(params):
         if callable(replacement):
@@ -172,12 +196,16 @@ def _replace_personalization(html: str, params: ConversionParams) -> tuple[str, 
             result = updated
 
     if token_hits:
-        return result, True
+        changed = True
 
+    if re.search(r"@{\s*if\s+Recipient\.IsMale\s*}", result, re.IGNORECASE):
+        return html, False
     if re.search(r"\$\{\s*Recipient\s*\.", result, re.IGNORECASE):
         return html, False
 
-    greeting = block4_personalization(params)
+    if changed:
+        return result, True
+
     fallback_patterns = [
         r"Здравствуйте[\s\S]*?!",
         r"Добрый\s+день[\s\S]*?!",
@@ -197,6 +225,8 @@ def _should_apply_content_deeplink(url: str) -> bool:
     if lower in {"https://docsfera.ru", "http://docsfera.ru"}:
         return False
     if any(token in lower for token in ("voting/cxq", "personal/unsubscribe", "unsubscribe")):
+        return False
+    if "/upload/" in lower or lower.endswith(".pdf"):
         return False
     return True
 
@@ -284,9 +314,9 @@ def _replace_cxq_block(html: str, params: ConversionParams) -> tuple[str, bool]:
 
     def replace_href(match: re.Match[str]) -> str:
         nonlocal count
-        original = match.group(3)
+        original = html_lib.unescape(match.group(3))
         rating = _extract_cxq_rating(original)
-        new_url = build_cxq_url(params, rating)
+        new_url = build_cxq_url(params, rating, original_url=original)
         if new_url != original:
             count += 1
         return f"{match.group(1)}{match.group(2)}{new_url}{match.group(4)}"
@@ -296,9 +326,9 @@ def _replace_cxq_block(html: str, params: ConversionParams) -> tuple[str, bool]:
     if count == 0:
         def replace_bare(match: re.Match[str]) -> str:
             nonlocal count
-            original = match.group(0)
+            original = html_lib.unescape(match.group(0))
             rating = _extract_cxq_rating(original)
-            new_url = build_cxq_url(params, rating)
+            new_url = build_cxq_url(params, rating, original_url=original)
             if new_url != original:
                 count += 1
             return new_url
@@ -402,8 +432,21 @@ def convert_mindbox_to_sfmc(html: str, params: ConversionParams) -> ConversionRe
     else:
         warnings.append("Блок №4: не найдено приветствие для замены персонализации")
 
+    result, ok = _replace_view_in_browser(result)
+    if ok:
+        changes.append("Обновлена ссылка «сюда» (блок №3) — href без изменения вёрстки")
+    else:
+        warnings.append("Блок №3: не найден текст про некорректное отображение письма")
+
     result, strip_warnings = _strip_mindbox_artifacts(result)
     warnings.extend(strip_warnings)
+    result = re.sub(
+        r'<custom\s+name="opencounter"\s+type="tracking"\s*/?>',
+        "",
+        result,
+        count=1,
+        flags=re.IGNORECASE,
+    )
 
     if "set @subscriberKey = _subscriberkey" not in result:
         snippet = block1(params)
@@ -420,12 +463,6 @@ def convert_mindbox_to_sfmc(html: str, params: ConversionParams) -> ConversionRe
             changes.append("Добавлен блок №2 (метаданные кампании и opencounter)")
         else:
             warnings.append("Не найден </head> — блок №2 не вставлен")
-
-    result, ok = _replace_view_in_browser(result)
-    if ok:
-        changes.append("Обновлена ссылка «сюда» (блок №3) — href без изменения вёрстки")
-    else:
-        warnings.append("Блок №3: не найден текст про некорректное отображение письма")
 
     result, deeplink_count = _apply_all_docsfera_deeplinks(result)
     if deeplink_count:
