@@ -680,7 +680,7 @@
       </div>
       <h1 class="header-title">Sanofi | Mindbox → SFMC Converter v3</h1>
       <p class="header-subtitle">Одноколоночный мастер конвертации шаблонов для SFMC.</p>
-      <div class="version-banner">Версия 3.9 — AT1D: склеивает split-приветствие, inline-отписка</div>
+      <div class="version-banner">Версия 4.0 — универсально для всех рассылок, CXQ без автозаполнения</div>
     </div>
   </header>
 
@@ -762,6 +762,7 @@
         </div>
 
         <h3 class="section-title">CXQ-метки <span class="section-badge">блок №5</span></h3>
+        <p style="margin:0 0 16px;color:var(--muted);font-size:14px;">Поля необязательны. Если в HTML уже есть CXQ-ссылки (docsfera или Qualtrics), параметры берутся из шаблона. Заполняйте только для переопределения.</p>
         <div class="form-grid">
           <div class="field">
             <label for="brand_search">Поиск бренда</label>
@@ -769,42 +770,38 @@
             <small>Фильтрует список Brand в реальном времени.</small>
           </div>
           <div class="field">
-            <label for="cxq_brand">Brand <span class="required">*</span></label>
+            <label for="cxq_brand">Brand</label>
             <div class="brand-box">
               <div class="brand-list">
                 <select id="cxq_brand" size="8"></select>
               </div>
             </div>
-            <small>Выберите бренд, затем проверьте автоподстановку DA/TA.</small>
+            <small>Необязательно. Подсказки DA/TA появятся после выбора бренда.</small>
           </div>
           <div class="inline-grid">
             <div class="field">
-              <label for="cxq_da">DA <span class="required">*</span></label>
-              <input id="cxq_da" list="da-list">
+              <label for="cxq_da">DA</label>
+              <input id="cxq_da" list="da-list" placeholder="Из HTML, если пусто">
               <datalist id="da-list"></datalist>
-              <small>Обязательное поле. Влияет на параметры URL CXQ.</small>
             </div>
             <div class="field">
-              <label for="cxq_ta">TA <span class="required">*</span></label>
-              <input id="cxq_ta" list="ta-list">
+              <label for="cxq_ta">TA</label>
+              <input id="cxq_ta" list="ta-list" placeholder="Из HTML, если пусто">
               <datalist id="ta-list"></datalist>
-              <small>Обязательное поле. Используется в каждой ссылке рейтинга R=1..7.</small>
             </div>
           </div>
           <div class="field">
             <label for="cxq_bu">BU</label>
             <select id="cxq_bu"></select>
-            <small>По умолчанию GENERAL MEDICINES.</small>
           </div>
           <div class="field">
             <label for="cxq_function">Function</label>
             <select id="cxq_function"></select>
-            <small>По умолчанию Commercial.</small>
           </div>
           <div class="field">
             <label for="cxq_cn">CN</label>
             <select id="cxq_cn"></select>
-            <small>По умолчанию journey. Для promo utm_campaign в CXQ не добавляется.</small>
+            <small>Для promo utm_campaign в docsfera CXQ не добавляется.</small>
           </div>
           <div class="field field-wide" id="field-utm">
             <label for="utm_campaign">utm_campaign <span class="required" id="utm-required" hidden>*</span></label>
@@ -939,9 +936,9 @@
         cxq_brand: document.getElementById("cxq_brand").value.trim(),
         cxq_da: document.getElementById("cxq_da").value.trim(),
         cxq_ta: document.getElementById("cxq_ta").value.trim(),
-        cxq_bu: document.getElementById("cxq_bu").value.trim() || "GENERAL MEDICINES",
-        cxq_function: document.getElementById("cxq_function").value.trim() || "Commercial",
-        cxq_cn: document.getElementById("cxq_cn").value.trim() || "journey",
+        cxq_bu: document.getElementById("cxq_bu").value.trim(),
+        cxq_function: document.getElementById("cxq_function").value.trim(),
+        cxq_cn: document.getElementById("cxq_cn").value.trim(),
       };
     }
 
@@ -1126,14 +1123,14 @@
       const base = decoded.split("?")[0];
       let ta = cxqQueryParam(decoded, "TA");
       let bu = cxqQueryParam(decoded, "BU");
-      let cn = cxqQueryParam(decoded, "CN") || "journey";
+      let cn = cxqQueryParam(decoded, "CN");
       const country = cxqQueryParam(decoded, "Country") || "RU";
       const qlang = cxqQueryParam(decoded, "Q_Language") || "RU";
+      const overrides = !!(p.cxq_ta || p.cxq_bu || p.cxq_cn);
       if (p.cxq_ta) ta = p.cxq_ta.replace(/ /g, "_");
       if (p.cxq_bu) bu = p.cxq_bu.replace(/ /g, "_");
       if (p.cxq_cn) cn = p.cxq_cn;
-      if (!ta) ta = p.cxq_ta ? p.cxq_ta.replace(/ /g, "_") : "CrossTA";
-      if (!bu) bu = p.cxq_bu ? p.cxq_bu.replace(/ /g, "_") : "GeneralMedicines";
+      if (!overrides) return decoded;
       return `${base}?Country=${country}&Q_Language=${qlang}&TA=${ta}&BU=${bu}&CN=${cn}&R=${rating}`;
     }
 
@@ -1144,27 +1141,40 @@
         let da = cxqQueryParam(decoded, "DA");
         let ta = cxqQueryParam(decoded, "TA");
         let bu = cxqQueryParam(decoded, "BU");
-        let cn = cxqQueryParam(decoded, "CN") || "journey";
-        let fn = cxqQueryParam(decoded, "Function") || p.cxq_function.replace(/ /g, "_");
+        let cn = cxqQueryParam(decoded, "CN");
+        let fn = cxqQueryParam(decoded, "Function");
         let franchise = cxqQueryParam(decoded, "Franchise") || brand || da;
+        const overrides = !!(p.cxq_brand || p.cxq_da || p.cxq_ta || p.cxq_bu || p.cxq_cn || p.cxq_function);
+        const utmAdd = p.utm_campaign && (p.cxq_cn || cn || "").toLowerCase() !== "promo" && !/utm_campaign=/i.test(decoded);
 
         if (p.cxq_brand) brand = p.cxq_brand.replace(/ /g, "_");
         if (p.cxq_da) da = p.cxq_da.replace(/ /g, "_");
         if (p.cxq_ta) ta = p.cxq_ta.replace(/ /g, "_");
         if (p.cxq_bu) bu = p.cxq_bu.replace(/ /g, "_");
         if (p.cxq_cn) cn = p.cxq_cn;
+        if (p.cxq_function) fn = p.cxq_function.replace(/ /g, "_");
         if (!franchise) franchise = brand || da;
+        if (!overrides && !utmAdd) return decoded;
+
+        if (!bu) bu = "GENERAL_MEDICINES";
+        if (!fn) fn = "Commercial";
+        if (!cn) cn = p.cxq_cn || "journey";
 
         let url = `${CXQ_BASE_URL}?Channel=email&R=${rating}&Brand=${brand}&DA=${da}&TA=${ta}&Franchise=${franchise}&BU=${bu}&Function=${fn}&CN=${cn}`;
-        if (cn.toLowerCase() !== "promo" && p.utm_campaign) {
+        const effectiveCn = (cn || "").toLowerCase();
+        if (effectiveCn !== "promo" && p.utm_campaign) {
           url += `&utm_campaign=${encodeURIComponent(p.utm_campaign)}`;
         }
         return url;
       }
 
+      if (!p.cxq_brand || !p.cxq_da || !p.cxq_ta) return "";
       const enc = (v) => String(v).replace(/ /g, "_").toUpperCase();
-      let url = `${CXQ_BASE_URL}?Channel=email&R=${rating}&Brand=${enc(p.cxq_brand)}&DA=${enc(p.cxq_da)}&TA=${enc(p.cxq_ta)}&Franchise=${enc(p.cxq_da)}&BU=${enc(p.cxq_bu)}&Function=${encodeURIComponent(p.cxq_function.replace(/ /g, "_"))}&CN=${encodeURIComponent(p.cxq_cn)}`;
-      if (p.cxq_cn.toLowerCase() !== "promo" && p.utm_campaign) {
+      const bu = enc(p.cxq_bu || "GENERAL_MEDICINES");
+      const fn = encodeURIComponent((p.cxq_function || "Commercial").replace(/ /g, "_"));
+      const cnVal = p.cxq_cn || "journey";
+      let url = `${CXQ_BASE_URL}?Channel=email&R=${rating}&Brand=${enc(p.cxq_brand)}&DA=${enc(p.cxq_da)}&TA=${enc(p.cxq_ta)}&Franchise=${enc(p.cxq_da)}&BU=${bu}&Function=${fn}&CN=${encodeURIComponent(cnVal)}`;
+      if (cnVal.toLowerCase() !== "promo" && p.utm_campaign) {
         url += `&utm_campaign=${encodeURIComponent(p.utm_campaign)}`;
       }
       return url;
@@ -1413,21 +1423,27 @@
         warnings.push("Блок №4 (deeplink): ссылки docsfera.ru для обёртки не найдены");
       }
 
-      if (p.cxq_brand) {
+      const hasCxq = /docsfera\.ru\/voting\/cxq|qualtrics\.com\/jfe\/form/i.test(result);
+      if (hasCxq) {
         const usesDocsfera = /docsfera\.ru\/voting\/cxq/i.test(result);
-        if (usesDocsfera && p.cxq_cn.toLowerCase() !== "promo" && !p.utm_campaign) {
-          warnings.push("Блок №5: utm_campaign обязателен для docsfera CXQ, когда CN не promo");
+        if (usesDocsfera) {
+          const cnValues = [...result.matchAll(/[?&]CN=([^"'&\s<>]+)/gi)].map((m) => m[1]);
+          const needsUtm = cnValues.some((v) => v.toLowerCase() !== "promo" && v !== "");
+          if (needsUtm && !p.utm_campaign && !/utm_campaign=/i.test(result)) {
+            warnings.push(
+              "Блок №5: в docsfera CXQ может понадобиться utm_campaign (CN не promo). " +
+              "Заполните utm_campaign, если нужно переопределить ссылки."
+            );
+          }
         }
         before = result;
         const cxqResult = replaceCxqLinks(result, p);
         result = cxqResult.html;
         if (cxqResult.changed && result !== before) {
           changes.push("Обновлены href в CXQ-ссылках (блок №5) — вёрстка сохранена");
-        } else if (!/docsfera\.ru\/voting\/cxq|qualtrics\.com\/jfe\/form/i.test(result)) {
-          warnings.push("Блок №5: CXQ-ссылки (docsfera или Qualtrics) не найдены");
+        } else if ([p.cxq_brand, p.cxq_da, p.cxq_ta, p.cxq_bu, p.cxq_cn, p.cxq_function, p.utm_campaign].some(Boolean)) {
+          warnings.push("Блок №5: CXQ-ссылки не изменились — проверьте параметры формы");
         }
-      } else {
-        warnings.push("Блок №5: укажите Brand");
       }
 
       const unsubResult = replaceUnsubscribe(result);
@@ -1519,10 +1535,8 @@
     function isUtmCampaignRequired() {
       const cn = document.getElementById("cxq_cn").value.trim().toLowerCase();
       if (cn === "promo") return false;
-      if (/qualtrics\.com\/jfe\/form/i.test(uploadedHtmlSnippet) && !/docsfera\.ru\/voting\/cxq/i.test(uploadedHtmlSnippet)) {
-        return false;
-      }
-      return true;
+      if (cn && cn !== "promo") return true;
+      return false;
     }
 
     function updateUtmRequiredState() {
@@ -1547,19 +1561,9 @@
         return false;
       }
       const p = getParams();
-      let ok = true;
       if (isUtmCampaignRequired() && !p.utm_campaign) {
         document.getElementById("field-utm").classList.add("invalid");
-        ok = false;
-      }
-      if (!p.cxq_brand || !p.cxq_da || !p.cxq_ta) ok = false;
-      if (!ok) {
-        const missing = [];
-        if (isUtmCampaignRequired() && !p.utm_campaign) missing.push("utm_campaign");
-        if (!p.cxq_brand) missing.push("Brand");
-        if (!p.cxq_da) missing.push("DA");
-        if (!p.cxq_ta) missing.push("TA");
-        toast(`Заполните: ${missing.join(", ")}`, "error");
+        toast("Заполните utm_campaign — выбран CN не promo", "error");
         setStep(2);
         return false;
       }
@@ -1599,28 +1603,24 @@
       toast("Файл удалён", "info");
     }
 
-    function populateSelect(id, values, fallback) {
+    function populateSelect(id, values) {
       const el = document.getElementById(id);
       const unique = [...new Set((values || []).filter(Boolean))];
-      if (!unique.length && fallback) unique.push(fallback);
-      el.innerHTML = unique.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
-      if (fallback && unique.includes(fallback)) el.value = fallback;
+      el.innerHTML = '<option value="">— не выбрано —</option>' +
+        unique.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+      el.value = "";
     }
 
     function renderBrands(list) {
-      els.brandSelect.innerHTML = list.map((b) => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join("");
+      els.brandSelect.innerHTML = '<option value="">— не выбран —</option>' +
+        list.map((b) => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join("");
+      els.brandSelect.value = "";
     }
 
     function applyBrandDefaults() {
       const brand = els.brandSelect.value;
       const rows = CXQ.rows.filter((r) => r.Brand === brand);
       if (!rows.length) return;
-      const row = rows[0];
-      document.getElementById("cxq_da").value = row.DA || "";
-      document.getElementById("cxq_ta").value = row.TA || "";
-      if (row.BU) document.getElementById("cxq_bu").value = row.BU;
-      if (row.Function) document.getElementById("cxq_function").value = row.Function;
-      if (row.CN) document.getElementById("cxq_cn").value = row.CN;
       updateUtmRequiredState();
       document.getElementById("da-list").innerHTML = [...new Set(rows.map((r) => r.DA).filter(Boolean))].map((v) => `<option value="${escapeHtml(v)}"></option>`).join("");
       document.getElementById("ta-list").innerHTML = [...new Set(rows.map((r) => r.TA).filter(Boolean))].map((v) => `<option value="${escapeHtml(v)}"></option>`).join("");
@@ -1704,9 +1704,9 @@
       toast(`Скачан файл: ${outputFilename}`, "success");
     };
 
-    populateSelect("cxq_bu", CXQ.unique_values?.BU, "GENERAL MEDICINES");
-    populateSelect("cxq_function", CXQ.unique_values?.Function, "Commercial");
-    populateSelect("cxq_cn", CXQ.unique_values?.CN, "journey");
+    populateSelect("cxq_bu", CXQ.unique_values?.BU);
+    populateSelect("cxq_function", CXQ.unique_values?.Function);
+    populateSelect("cxq_cn", CXQ.unique_values?.CN);
     renderBrands(CXQ.brands || []);
     updateUtmRequiredState();
     setStep(1);

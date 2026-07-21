@@ -99,9 +99,9 @@ async def convert(
     cxq_brand: str = Form(""),
     cxq_da: str = Form(""),
     cxq_ta: str = Form(""),
-    cxq_bu: str = Form("GENERAL MEDICINES"),
-    cxq_function: str = Form("Commercial"),
-    cxq_cn: str = Form("journey"),
+    cxq_bu: str = Form(""),
+    cxq_function: str = Form(""),
+    cxq_cn: str = Form(""),
 ) -> JSONResponse:
     content = (await file.read()).decode("utf-8", errors="replace")
     params = ConversionParams(
@@ -146,9 +146,9 @@ async def download(
     cxq_brand: str = Form(""),
     cxq_da: str = Form(""),
     cxq_ta: str = Form(""),
-    cxq_bu: str = Form("GENERAL MEDICINES"),
-    cxq_function: str = Form("Commercial"),
-    cxq_cn: str = Form("journey"),
+    cxq_bu: str = Form(""),
+    cxq_function: str = Form(""),
+    cxq_cn: str = Form(""),
 ) -> Response:
     content = (await file.read()).decode("utf-8", errors="replace")
     params = ConversionParams(

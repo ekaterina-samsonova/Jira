@@ -18,9 +18,9 @@ class ConversionParams:
     cxq_brand: str = ""
     cxq_da: str = ""
     cxq_ta: str = ""
-    cxq_bu: str = "GENERAL MEDICINES"
-    cxq_function: str = "Commercial"
-    cxq_cn: str = "journey"
+    cxq_bu: str = ""
+    cxq_function: str = ""
+    cxq_cn: str = ""
 
 
 CLIENT_ID = "tuedutmcfrbrbaet7gkcgw6xrs2hm3f4"
@@ -110,10 +110,11 @@ def build_qualtrics_cxq_url(params: ConversionParams, rating: int, original_url:
     base = decoded.split("?", 1)[0]
     ta = _cxq_query_param(decoded, "TA")
     bu = _cxq_query_param(decoded, "BU")
-    cn = _cxq_query_param(decoded, "CN") or "journey"
+    cn = _cxq_query_param(decoded, "CN")
     country = _cxq_query_param(decoded, "Country") or "RU"
     qlang = _cxq_query_param(decoded, "Q_Language") or "RU"
 
+    overrides = any([params.cxq_ta, params.cxq_bu, params.cxq_cn])
     if params.cxq_ta:
         ta = params.cxq_ta.replace(" ", "_")
     if params.cxq_bu:
@@ -121,10 +122,8 @@ def build_qualtrics_cxq_url(params: ConversionParams, rating: int, original_url:
     if params.cxq_cn:
         cn = params.cxq_cn
 
-    if not ta:
-        ta = params.cxq_ta.replace(" ", "_") if params.cxq_ta else "CrossTA"
-    if not bu:
-        bu = params.cxq_bu.replace(" ", "_") if params.cxq_bu else "GeneralMedicines"
+    if not overrides:
+        return decoded
 
     return f"{base}?Country={country}&Q_Language={qlang}&TA={ta}&BU={bu}&CN={cn}&R={rating}"
 
@@ -136,9 +135,23 @@ def build_cxq_url(params: ConversionParams, rating: int, original_url: str = "")
         da = _cxq_query_param(decoded, "DA")
         ta = _cxq_query_param(decoded, "TA")
         bu = _cxq_query_param(decoded, "BU")
-        cn = _cxq_query_param(decoded, "CN") or "journey"
-        function = _cxq_query_param(decoded, "Function") or params.cxq_function.replace(" ", "_")
+        cn = _cxq_query_param(decoded, "CN")
+        function = _cxq_query_param(decoded, "Function")
         franchise = _cxq_query_param(decoded, "Franchise") or brand or da
+
+        overrides = any([
+            params.cxq_brand,
+            params.cxq_da,
+            params.cxq_ta,
+            params.cxq_bu,
+            params.cxq_cn,
+            params.cxq_function,
+        ])
+        utm_add = (
+            params.utm_campaign
+            and (params.cxq_cn or cn or "").lower() != "promo"
+            and "utm_campaign" not in decoded.lower()
+        )
 
         if params.cxq_brand:
             brand = params.cxq_brand.replace(" ", "_")
@@ -150,30 +163,46 @@ def build_cxq_url(params: ConversionParams, rating: int, original_url: str = "")
             bu = params.cxq_bu.replace(" ", "_")
         if params.cxq_cn:
             cn = params.cxq_cn
+        if params.cxq_function:
+            function = params.cxq_function.replace(" ", "_")
 
         if not franchise:
             franchise = brand or da
+
+        if not overrides and not utm_add:
+            return decoded
+
+        if not bu:
+            bu = "GENERAL_MEDICINES"
+        if not function:
+            function = "Commercial"
+        if not cn:
+            cn = params.cxq_cn or "journey"
 
         url = (
             f"{CXQ_BASE_URL}?Channel=email&R={rating}&Brand={brand}&DA={da}&TA={ta}"
             f"&Franchise={franchise}&BU={bu}&Function={function}&CN={cn}"
         )
-        if cn.lower() != "promo" and params.utm_campaign:
+        effective_cn = (cn or "").lower()
+        if effective_cn != "promo" and params.utm_campaign:
             url += f"&utm_campaign={params.utm_campaign}"
         return url
+
+    if not params.cxq_brand or not params.cxq_da or not params.cxq_ta:
+        return ""
 
     brand = params.cxq_brand.replace(" ", "_").upper()
     da = params.cxq_da.replace(" ", "_").upper()
     ta = params.cxq_ta.replace(" ", "_").upper()
     franchise = da
-    bu = params.cxq_bu.replace(" ", "_").upper()
-    function = params.cxq_function.replace(" ", "_")
-    cn = params.cxq_cn
+    bu = (params.cxq_bu or "GENERAL_MEDICINES").replace(" ", "_").upper()
+    function = (params.cxq_function or "Commercial").replace(" ", "_")
+    cn = params.cxq_cn or "journey"
     url = (
         f"{CXQ_BASE_URL}?Channel=email&R={rating}&Brand={brand}&DA={da}&TA={ta}"
         f"&Franchise={franchise}&BU={bu}&Function={function}&CN={cn}"
     )
-    if params.cxq_cn.lower() != "promo" and params.utm_campaign:
+    if cn.lower() != "promo" and params.utm_campaign:
         url += f"&utm_campaign={params.utm_campaign}"
     return url
 

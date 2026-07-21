@@ -261,6 +261,28 @@ def test_digest_at1d_qualtrics_and_cta_deeplink():
     assert not errors
 
 
+def test_convert_preserves_cxq_when_params_empty():
+    immuno = (
+        Path(__file__).parent / "fixtures" / "Digest_immuno_14_2026_mindbox_8d26.html"
+    ).read_text(encoding="utf-8")
+    immuno_result = convert_mindbox_to_sfmc(immuno, ConversionParams()).html
+
+    assert "Function=Commercial&CN=promo" in immuno_result
+    assert "Function=Medical&CN=promo" in immuno_result
+    assert "Brand=DUPIXENT" in immuno_result
+    assert "BU=SPECIALTY_CARE" in immuno_result
+
+    at1d = (
+        Path(__file__).parent / "fixtures" / "Digest_at1d_9_2026_b_mindbox.html"
+    ).read_text(encoding="utf-8")
+    at1d_result = convert_mindbox_to_sfmc(at1d, ConversionParams()).html
+
+    assert "CN=RTE_content_campaign_2023" in at1d_result
+    assert "TA=CrossTA" in at1d_result
+    assert "BU=GeneralMedicines" in at1d_result
+    assert "qualtrics.com/jfe/form" in at1d_result
+
+
 def test_cxq_franchise_fallback_from_form_params():
     params = ConversionParams(
         utm_campaign="Campaign_Test_Q2_2026",

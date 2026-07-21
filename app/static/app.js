@@ -36,9 +36,9 @@ let convertedReady = false;
 init();
 
 function init() {
-  populateSelectOptions(buSelect, cxqData.unique_values?.BU || ['GENERAL MEDICINES', 'SPECIALTY CARE', 'VACCINES'], 'GENERAL MEDICINES');
-  populateSelectOptions(functionSelect, cxqData.unique_values?.Function || ['Commercial', 'Medical'], 'Commercial');
-  populateSelectOptions(cnSelect, cxqData.unique_values?.CN || ['journey', 'promo'], 'journey');
+  populateSelectOptions(buSelect, cxqData.unique_values?.BU || [], '');
+  populateSelectOptions(functionSelect, cxqData.unique_values?.Function || [], '');
+  populateSelectOptions(cnSelect, cxqData.unique_values?.CN || [], '');
   renderBrandOptions(allBrands);
   updateUtmRequiredState();
   bindEvents();
@@ -95,20 +95,14 @@ function bindEvents() {
 
 function populateSelectOptions(select, values, defaultValue) {
   const unique = [...new Set(values.filter(Boolean))];
-  select.innerHTML = unique.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
-  if (defaultValue && unique.includes(defaultValue)) {
-    select.value = defaultValue;
-  }
+  select.innerHTML = '<option value="">— не выбрано —</option>' +
+    unique.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+  select.value = defaultValue && unique.includes(defaultValue) ? defaultValue : '';
 }
 
 function renderBrandOptions(brands) {
-  brandSelect.innerHTML = brands
-    .map((brand) => `<option value="${escapeHtml(brand)}">${escapeHtml(brand)}</option>`)
-    .join('');
-  if (brands.length === 1) {
-    brandSelect.value = brands[0];
-    applyBrandDefaults();
-  }
+  brandSelect.innerHTML = '<option value="">— не выбран —</option>' +
+    brands.map((brand) => `<option value="${escapeHtml(brand)}">${escapeHtml(brand)}</option>`).join('');
 }
 
 function handleFileSelection(file) {
@@ -151,7 +145,10 @@ function getFormData() {
 }
 
 function isUtmCampaignRequired() {
-  return cnSelect.value.trim().toLowerCase() !== 'promo';
+  const formCn = cnSelect.value.trim().toLowerCase();
+  if (formCn === 'promo') return false;
+  if (formCn && formCn !== 'promo') return true;
+  return false;
 }
 
 function updateUtmRequiredState() {
@@ -176,17 +173,8 @@ function validateForm() {
   }
 
   const utmCampaign = form.utm_campaign.value.trim();
-  const brand = form.cxq_brand.value.trim();
-  const da = form.cxq_da.value.trim();
-  const ta = form.cxq_ta.value.trim();
-  const missing = [];
-  if (isUtmCampaignRequired() && !utmCampaign) missing.push('utm_campaign');
-  if (!brand) missing.push('Brand');
-  if (!da) missing.push('DA');
-  if (!ta) missing.push('TA');
-
-  if (missing.length) {
-    showAlert(`Заполните: ${missing.join(', ')}.`, 'error');
+  if (isUtmCampaignRequired() && !utmCampaign) {
+    showAlert('Заполните utm_campaign — выбран CN не promo.', 'error');
     goToStep(2);
     return false;
   }
@@ -322,14 +310,6 @@ function applyBrandDefaults() {
   const brand = brandSelect.value;
   const rows = cxqRows.filter((row) => row.Brand === brand);
   if (!rows.length) return;
-
-  const row = rows[0];
-  daInput.value = row.DA || '';
-  taInput.value = row.TA || '';
-  if (row.BU) buSelect.value = row.BU;
-  if (row.Function) functionSelect.value = row.Function;
-  if (row.CN) cnSelect.value = row.CN;
-  updateUtmRequiredState();
 
   fillDatalist('da-options', [...new Set(rows.map((row) => row.DA).filter(Boolean))]);
   fillDatalist('ta-options', [...new Set(rows.map((row) => row.TA).filter(Boolean))]);

@@ -100,22 +100,23 @@
 
           <div class="form-section">
             <h3>CXQ-параметры (блок №5)</h3>
+            <p><small>Поля необязательны: если в HTML уже есть CXQ-ссылки, параметры сохраняются из шаблона. Заполняйте только для переопределения.</small></p>
             <div class="form-grid">
               <label class="field field-wide">
-                <span>Brand *</span>
+                <span>Brand</span>
                 <input type="search" id="brand-search" placeholder="Начните вводить название бренда...">
                 <select name="cxq_brand" id="cxq-brand" size="6"></select>
               </label>
 
               <label class="field">
-                <span>DA *</span>
-                <input type="text" name="cxq_da" id="cxq-da" list="da-options">
+                <span>DA</span>
+                <input type="text" name="cxq_da" id="cxq-da" list="da-options" placeholder="Оставьте пустым — возьмётся из HTML">
                 <datalist id="da-options"></datalist>
               </label>
 
               <label class="field">
-                <span>TA *</span>
-                <input type="text" name="cxq_ta" id="cxq-ta" list="ta-options">
+                <span>TA</span>
+                <input type="text" name="cxq_ta" id="cxq-ta" list="ta-options" placeholder="Оставьте пустым — возьмётся из HTML">
                 <datalist id="ta-options"></datalist>
               </label>
 

@@ -381,7 +381,7 @@ def _replace_cxq_block(html: str, params: ConversionParams) -> tuple[str, bool]:
         nonlocal count
         original = html_lib.unescape(match.group(3))
         rating = _extract_cxq_rating(original)
-        new_url = build_cxq_url(params, rating, original_url=original)
+        new_url = build_cxq_url(params, rating, original_url=original) or original
         if new_url != original:
             count += 1
         return f"{match.group(1)}{match.group(2)}{new_url}{match.group(4)}"
@@ -613,18 +613,33 @@ def convert_mindbox_to_sfmc(html: str, params: ConversionParams) -> ConversionRe
     else:
         warnings.append("Блок №4 (deeplink): ссылки docsfera.ru для обёртки не найдены")
 
-    if params.cxq_brand:
+    has_cxq = bool(
+        re.search(r"docsfera\.ru/voting/cxq|qualtrics\.com/jfe/form", result, re.IGNORECASE)
+    )
+    if has_cxq:
         uses_docsfera = bool(re.search(r"docsfera\.ru/voting/cxq", result, re.IGNORECASE))
-        if uses_docsfera and params.cxq_cn.lower() != "promo" and not params.utm_campaign:
-            warnings.append("Блок №5: utm_campaign обязателен для docsfera CXQ, когда CN не promo")
+        if uses_docsfera:
+            cn_values = re.findall(r"[?&]CN=([^\"'&\s<>]+)", result, re.IGNORECASE)
+            needs_utm = any(v.lower() not in ("promo", "") for v in cn_values)
+            if needs_utm and not params.utm_campaign and "utm_campaign=" not in result.lower():
+                warnings.append(
+                    "Блок №5: в docsfera CXQ может понадобиться utm_campaign (CN не promo). "
+                    "Заполните utm_campaign, если нужно переопределить ссылки."
+                )
         before = result
         result, ok = _replace_cxq_links(result, params)
         if ok and result != before:
             changes.append("Обновлены href в CXQ-ссылках (блок №5) — вёрстка сохранена")
-        elif not re.search(r"docsfera\.ru/voting/cxq|qualtrics\.com/jfe/form", result, re.IGNORECASE):
-            warnings.append("Блок №5: CXQ-ссылки (docsfera или Qualtrics) не найдены")
-    else:
-        warnings.append("Блок №5: укажите Brand для генерации CXQ-ссылок")
+        elif any([
+            params.cxq_brand,
+            params.cxq_da,
+            params.cxq_ta,
+            params.cxq_bu,
+            params.cxq_cn,
+            params.cxq_function,
+            params.utm_campaign,
+        ]):
+            warnings.append("Блок №5: CXQ-ссылки не изменились — проверьте параметры формы")
 
     result, ok = _replace_unsubscribe(result)
     if ok:
